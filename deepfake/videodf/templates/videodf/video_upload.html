@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Upload Video</title>
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+        <style>
+            body{
+                margin: 0;
+                padding: 0;
+                background: radial-gradient(
+                    circle at 30% 70%, 
+                    #000513 0%,       
+                    #011709 15%,      
+                    {% comment %} #010A12 15%,       {% endcomment %}
+                    #010E14 30%,       
+                    #001A0D 50%,      
+                    #030815 70%,      
+                    #050A18 85%,      
+                    #000000 100%      
+                );
+                color: #cbcfd2; 
+                font-family: Arial, sans-serif;
+                min-height:100vh;
+        
+            }
+            /* Custom Styles for Trimming Timeline */
+            .timeline-container {
+                position: relative;
+                height: 50px;
+                background-color:rgba(148, 145, 145, 0.44);
+                border-radius: 12px;
+                overflow: hidden;
+                margin: 20px auto;
+            }
+
+            .line {
+                position: absolute;
+                height: 100%;
+                width: 10px;
+                cursor: ew-resize;
+                background-color: #00a36e;
+                z-index: 10;
+            }
+            
+            .line.start-line {
+                border-top-left-radius: 10px;
+                border-bottom-left-radius: 10px;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+                background-color: #00a36e;
+            }
+            
+            .line.end-line {
+                border-top-right-radius: 10px;
+                border-bottom-right-radius: 10px;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                background-color: #00a36e;
+                margin-left: -10px;
+            }
+            
+            /* Add the small middle line design */
+            .line.start-line::after,
+            .line.end-line::after {
+                content: '';
+                position: absolute;
+                width: 2px;
+                height: 30%;
+                background-color: #000; 
+                left: 50%; 
+                top: 35%; 
+                transform: translateX(-50%);
+                z-index: 11;
+            }
+            .range-background  {
+                position: absolute;
+                top: 0;
+                height: 100%;
+                background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+                z-index: 5;
+                border-style: solid;
+                border-color: rgb(7, 113, 42);
+                border-width: 2px 0px; 
+                border-radius: 10px;
+            }
+           
+            .playback-line {
+                position: absolute;
+                top: 0;
+                height: 100%;
+                width: 4px;
+                background-color: #cbcfd2;
+                cursor: grab;
+                z-index: 8;
+                right:10;
+            }
+
+
+            .playback-line.dragging {
+                cursor: grabbing; 
+            }
+            .progress-bar-container {
+                position: relative;
+                width: 100%;
+                height: 10px;
+                background-color: #cbcfd2;
+                border-radius: 5px;
+                margin-top: 10px;
+            }
+            .progress-bar {
+                position: absolute;
+                top: 0;
+                height: 100%;
+                width: 0%;
+                background-color: #00a36e;
+                border-radius: 5px;
+                max-width: 100%;
+            }
+            .text-col-head{
+                color: #cbcfd2;
+            }
+            .time-stamp {
+                margin-top: 10px;
+                font-size: 14px;
+                color: #cbcfd2;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .time-stamp .center-time {
+                font-weight: bold;
+            }
+            
+            .annotation-line {
+                position: absolute;
+                top: 0;
+                height: 100%;
+                width: 1px; 
+                background-color: #aeb9be; 
+                z-index: 3;
+            }
+
+            /* Shared Button Styles */
+            .next-sec-btn, .discardButton {
+                cursor: pointer;
+                margin-bottom: 3rem;
+                background: transparent;
+                letter-spacing: 1px;
+                font-weight: 700;
+                transform: scale(1.03);
+                transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease-in-out;
+                position: relative;
+                overflow: hidden;
+                border-radius: 10px;
+            }
+            
+            /* Trim Button (Green) */
+            .next-sec-btn {
+                color: #00a36e;
+                border: 2px solid #00a36e;
+            }
+            
+            .next-sec-btn:hover {
+                background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+                color: #cbcfd2;
+                transform: scale(1);
+            }
+            
+            .next-sec-btn:hover i {
+                position: relative;
+                z-index: 1;
+                animation: shake-icon 0.5s ease-in-out;
+            }
+            
+            /* Discard Button (Red) */
+            .discardButton {
+                color: #d9534f;
+                border: 2px solid #d9534f;
+            }
+            
+            .discardButton:hover {
+                background: radial-gradient(circle, rgba(200, 50, 50, 0.7), rgba(150, 30, 30, 0.6));
+                color: #f8d7da;
+                transform: scale(1);
+            }
+            
+            .discardButton:hover i {
+                position: relative;
+                z-index: 1;
+                animation: shake-icon 0.5s ease-in-out;
+            }
+            
+            /* Focus Effect */
+            .next-sec-btn:focus, .discardButton:focus {
+                outline: none;
+                box-shadow: 0 0 15px rgba(174, 167, 167, 0.46), 0 0 30px rgba(86, 82, 82, 0.45);
+            }
+            
+            /* Icon Shake Animation */
+            @keyframes shake-icon {
+                0% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                50% { transform: translateX(5px); }
+                75% { transform: translateX(-5px); }
+                100% { transform: translateX(0); }
+            }
+            
+
+
+            /* Loader for trimming */
+            #load-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.75);
+                z-index: 9999;
+                display: none; 
+              }
+              .loader-container {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+
+                width: 300px;
+                padding: 20px;
+             
+                border-radius: 10px;
+                text-align: center;
+              }
+
+              .load-dotted-line {
+                position: relative;
+                width: 80%;
+                border-top: 2px dotted #00a36e;
+                margin: 20px auto;
+                height: 0;
+              }
+              .scissor {
+                font-size: 1.5rem;
+                color: #00a36e;
+                position: absolute;
+                top: 9px; 
+                margin-left: 20px;
+                margin-right: 20px;
+              }
+              .scissor-left {
+                animation: load-move-left 3s linear infinite;
+                left: 0;
+              }
+          
+          
+              .scissor-right {
+                animation: load-move-left 3s linear infinite;
+                right: 0;
+                rotate: 180deg; 
+              }
+          
+              @keyframes load-move-left {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(90px); }
+              }
+          
+              .load-boundary-box {
+                border: 2px solid #00a36e;
+                width: 80%;
+                height: 25px;
+                margin: 20px auto;
+                position: relative;
+                overflow: hidden;
+              }
+          
+              .load-progress {
+                width: 100%;
+                height: 100%;
+                -webkit-mask: linear-gradient(90deg, #00a36e 70%, #0000 0) left/20% 100%;
+                background: linear-gradient(#00a36e 0 0) left/0% 100% no-repeat #dbdcef00;
+                animation: load-progress-animation 3s infinite steps(6);
+              }
+          
+              /* Progress animation keyframes */
+              @keyframes load-progress-animation {
+                100% {
+                  background-size: 120% 100%;
+                }
+              }
+          
+              /* Responsive text and elements */
+              .load-p {
+                color: white;
+              }
+
+              /* submitting loader */
+
+              .overlay_d {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.75);
+                z-index: 9999; 
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                display: none; 
+            }
+
+              .loader_d {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+        
+            /* Glow effect */
+            /* .glow_d {
+              box-shadow: rgba(255, 255, 255, 0.199) 0px 50px 100px -20px, 
+                rgba(255, 255, 255, 0.233) 0px 30px 60px -30px, 
+                rgba(200, 200, 255, 0.15) 0px -2px 6px 0px inset;
+            } */
+        
+        
+            .scanner-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Style for corner boxes */
+        .corner {
+            position: absolute;
+            width: 40px; 
+            height: 4px;
+            background-color: #00a36e; 
+        }
+        .corner-2 {
+            position: absolute;
+            width: 4px; 
+            height: 40px; 
+            background-color: #00a36e; 
+        }
+        
+        .top-left {
+            top: 0;
+            left: 0;
+        }
+        
+        .top-right {
+            top: 0;
+            right: 0;
+        }
+        
+        .bottom-left {
+            bottom: 0;
+            left: 0;
+        }
+        
+        .bottom-right {
+            bottom: 0;
+            right: 0;
+        }
+        
+        .top-left-down {
+            top: 0;
+            left: 0;
+        }
+        
+        .top-right-down {
+            top: 0;
+            right: 0;
+        }
+        
+        .bottom-left-up {
+            bottom: 0;
+            left: 0;
+        }
+        
+        .bottom-right-up {
+            bottom: 0;
+            right: 0;
+        }
+        
+            /* Fill effect */
+            .fill-effect_d {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                transform: scaleY(0);
+                transform-origin: top;
+                animation: fillEffect_d 2s linear infinite, alternateFill 4s linear infinite;
+            }
+        
+            @keyframes fillEffect_d {
+                0% {
+                    transform: scaleY(0);
+                }
+                100% {
+                    transform: scaleY(1);
+                }
+            }
+        
+            @keyframes alternateFill {
+                0%, 50% {
+                    background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+                }
+                51%, 100% {
+                    background: radial-gradient(circle, rgba(163, 0, 0, 0.69), rgba(67, 17, 17, 0.66));
+                }
+            }
+        
+            /* Alternating scan bar */
+            .scan-bar {
+                position: absolute;
+                height: 4px;
+                width: 100%;
+                background: rgba(0, 255, 0, 1);
+                z-index: 99;
+                animation: scanTopToBottom 2s linear infinite, alternateColor 4s linear infinite;
+            }
+        
+            @keyframes scanTopToBottom {
+                0% {
+                    top: 0;
+                }
+        
+                100% {
+                    top: 100%;
+                }
+            }
+        
+            @keyframes alternateColor {
+                0%, 50% {
+                    background: rgb(6, 186, 75);
+                    box-shadow: 0 0 20px rgba(0, 255, 0, 1), 0 0 30px rgba(0, 255, 0, 0.8);
+                }
+                51%, 100% {
+                    background: rgb(176, 25, 11);
+                    box-shadow: 0 0 20px rgba(255, 0, 0, 1), 0 0 30px rgba(255, 0, 0, 0.8);
+                }
+            }
+        
+            /* AI face container */
+            .face {
+                position: relative;
+                width: 190px; /* Smaller size */
+                height: 190px; /* Smaller size */
+        
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                /* animation: fastShake 1s infinite; */
+                overflow: hidden; /* Ensures the image stays within the div */
+                /* border-radius: 50%; */
+            }
+            .face img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 90;
+            animation: zoomInOut 3s infinite ease-in-out;
+        }
+        
+        /* Zoom In-Out Animation */
+        @keyframes zoomInOut {
+            0%, 100% { transform: scale(1); } /* Normal size */
+            50% { transform: scale(1.2); } /* Zoom in slightly */
+        }
+        
+           /* Text below container */
+        .analyzing-text {
+            margin-top: 10px; 
+            font-size: 1rem; 
+            font-weight: bold;
+            text-align: center;
+            color: #aeb9be;
+            white-space: nowrap; 
+            overflow: hidden; 
+            width: 0; 
+            animation: wait-type 3s infinite; 
+        }
+        
+        /* Typing effect animation */
+        
+        
+        @keyframes wait-type {
+                0% {
+                    width: 0;
+                }
+                99% {
+                    width: 100%;
+                }
+                100% {
+                    width: 0; 
+                }
+            }
+
+
+
+            /* --------------- */
+/* AI Message Section */
+.ai-message {
+  font-size: 1.8rem;
+  margin-bottom: 3rem;
+margin-top: 5rem; 
+  font-weight: bold;
+  text-align: center;
+  color: #00a36e;
+  text-shadow: 1px 1px 2px rgba(37, 104, 82, 0.84);
+  animation: fadeInSlideUp 3s ease-in-out;
+}
+.ai-message.video-uploaded-msg {
+    /* Reduce margin when a video is uploaded */
+    margin-top: 1.2rem;
+  }
+
+/* Typing Cursor */
+.cursor {
+  font-weight: normal;
+  animation: blink 0.6s infinite;
+  color: #00a36e;
+}
+
+/* Cursor Blinking Effect */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+
+
+@keyframes fadeInSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+
+  /* Upload Icon with AI Animation */
+.upload-icon {
+background: radial-gradient(circle, rgb(0, 163, 109), rgb(17, 67, 50));
+border: 1px solid rgba(5, 177, 57, 0.19);
+  color: #cbcfd2;
+  padding: 1rem;
+  border-radius: 50%;
+  font-size: 2rem;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+
+    box-shadow: 0 0 10px rgba(0, 163, 109, 0.84), 0 0 20px rgba(17, 67, 50, 0.84);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 104, 69, 0.84), 0 0 30px rgba(0, 219, 146, 0.84);
+  }
+}
+
+/* Upload Text with AI Entry Animation */
+.upload-text {
+  margin-top: 1rem;
+  color: #aeb9be;
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: textGlow 2s ease-out;
+}
+
+@keyframes textGlow {
+  0% {
+    color: rgba(255, 255, 255, 0);
+    transform: translateY(-20px);
+  }
+  100% {
+    color: #aeb9be;
+    transform: translateY(0);
+  }
+}
+
+/* check box */
+.checkbox-wrapper-26 * {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+
+  .checkbox-wrapper-26 input[type="checkbox"] {
+    display: none;
+  }
+
+  .checkbox-wrapper-26 label {
+    --size: 22px;
+    --shadow: calc(var(--size) * .07) calc(var(--size) * .1);
+
+    position: relative;
+    display: block;
+    width: var(--size);
+    height: var(--size);
+    margin: 0 auto;
+    background-color: #d9534f;
+    border-radius: 50%;
+
+    cursor: pointer;
+    transition: 0.2s ease transform, 0.2s ease background-color,
+      0.2s ease box-shadow;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .checkbox-wrapper-26 label:before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    width: calc(var(--size) * .7);
+    height: calc(var(--size) * .7);
+    margin: 0 auto;
+    background-color: #030303;
+    transform: translateY(-50%);
+    border-radius: 50%;
+  
+    transition: 0.2s ease width, 0.2s ease height;
+  }
+
+  .checkbox-wrapper-26 label:hover:before {
+    width: calc(var(--size) * .55);
+    height: calc(var(--size) * .55);
+    box-shadow: inset 0 var(--shadow) #ff9d96;
+  }
+
+  .checkbox-wrapper-26 label:active {
+    transform: scale(0.9);
+  }
+
+  .checkbox-wrapper-26 .tick_mark {
+    position: absolute;
+    top: -1px;
+    right: 0;
+    left: calc(var(--size) * -.05);
+    width: calc(var(--size) * .6);
+    height: calc(var(--size) * .6);
+    margin: 0 auto;
+    margin-left: calc(var(--size) * .14);
+    transform: rotateZ(-40deg);
+  }
+
+  .checkbox-wrapper-26 .tick_mark:before,
+  .checkbox-wrapper-26 .tick_mark:after {
+    content: "";
+    position: absolute;
+    background-color: #fff;
+    border-radius: 2px;
+    opacity: 0;
+    transition: 0.2s ease transform, 0.2s ease opacity;
+  }
+
+  .checkbox-wrapper-26 .tick_mark:before {
+    left: 0;
+    bottom: 0;
+    width: calc(var(--size) * .1);
+    height: calc(var(--size) * .3);
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.23);
+    transform: translateY(calc(var(--size) * -.68));
+  }
+
+  .checkbox-wrapper-26 .tick_mark:after {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(var(--size) * .1);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.23);
+    transform: translateX(calc(var(--size) * .78));
+  }
+
+  .checkbox-wrapper-26 input[type="checkbox"]:checked + label {
+    background-color: #00a36e;
+    box-shadow: 0 var(--shadow) #92ff97;
+  }
+
+  .checkbox-wrapper-26 input[type="checkbox"]:checked + label:before {
+    width: 0;
+    height: 0;
+  }
+
+  .checkbox-wrapper-26 input[type="checkbox"]:checked + label .tick_mark:before,
+  .checkbox-wrapper-26 input[type="checkbox"]:checked + label .tick_mark:after {
+    transform: translate(0);
+    opacity: 1;
+  }
+
+  /* ----------------- */
+  /* Bouncing effect */
+
+  @keyframes bounceLeftToRight {
+    0% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(10px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes bounceRightToLeft {
+    0% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(-10px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+  
+  /* Apply the bouncing effect once */
+  .bounce-effect-error {
+    animation: bounceLeftToRight 0.3s ease-in-out 0s 2; /* Run the animation once */
+  }
+  
+  .bounce-effect-error.reverse {
+    animation: bounceRightToLeft 0.3s ease-in-out 0s 2; /* Run the animation once */
+  }
+  
+  
+
+.whole-section{
+    min-height: calc(100vh - 140px);  /* cut the amount of navbar */
+}
+        </style>
+
+       
+    </head>
+ <body>
+    {% include 'nav-bar.html' %} 
+
+    <!-- Trimming loader -->
+    <div id="load-overlay">
+        <!-- Loader Container -->
+        <div class="loader-container">
+          <!-- Scissors and Dotted Line -->
+          <div class="relative w-full flex items-center justify-center">
+            <i class="fa-solid fa-scissors fa-beat-fade scissor scissor-left" style="color: #00a36e;"></i>
+            <div class="load-dotted-line"></div>
+            <i class="fa-solid fa-scissors fa-beat-fade scissor scissor-right" style="color: #00a36e;"></i>
+          </div>
+          <!-- Trimming Text -->
+          <p class="text-center text-lg font-semibold mt-4 load-p">Trimming</p>
+          <!-- Progress Bar -->
+          <div class="load-boundary-box">
+            <div class="load-progress"></div>
+          </div>
+        </div>
+      </div>
+
+<!-- Submitting loader -->
+<div class="overlay_d">
+    <div id="loader_d" class="loader_d text-center">
+      <!-- Scanner Container -->
+      <div class="scanner-container glow_d">
+        <!-- Fill Effect -->
+        <div class="fill-effect_d"></div>
+  
+        <!-- Scanning Bar -->
+        <div class="scan-bar"></div>
+  
+        <!-- Face -->
+        <div class="face">
+          <img src='{% static "images/AI_video_scan.jpg" %}' alt="Face Image">
+      </div>
+  
+        <!-- Corner Boxes -->
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+
+        <div class="corner-2 top-left-down"></div>
+        <div class="corner-2 top-right-down"></div>
+        <div class="corner-2 bottom-left-up"></div>
+        <div class="corner-2 bottom-right-up"></div>
+
+      </div>
+  
+      <!-- Analyzing Text -->
+      <div class="analyzing-text">
+        Analyzing your video . . .
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+    <div class="whole-section max-w-3xl mx-auto p-6">
+
+        <div class="ai-message">
+            <span id="typingText"></span>
+            <span class="cursor">|</span>
+          </div>
+
+        {% comment %} <h1 class="text-2xl font-bold mb-6 text-center">Upload and Trim Video</h1> {% endcomment %}
+
+        <!-- Upload Section -->
+        <div id="upload-section" class="flex flex-col items-center">
+            <label for="video_file" class="cursor-pointer flex flex-col items-center p-4">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-upload"></i>
+                  </div>
+
+                <span class="upload-text">Click to Upload Video</span>
+                <input type="file" id="video_file" accept="video/*" class="hidden" />
+            </label>
+        </div>
+
+        <div id="error-message-video" class="text-[#B50505] hidden font-bold text-center mt-2 bounce-effect-error">
+          Unsupported file format (Only .mp4 files are allowed).
+        </div>
+
+        <!-- Video Trimming Section -->
+        <div id="trim-section" class="hidden mt-6">
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold mb-2">Video Preview</h2>
+                <video id="uploadedVideo" controls class="w-full rounded shadow"></video>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <div class="flex flex-col md:flex-row md:items-center md:gap-6 mb-4">
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between mt-4 text-col-head">
+                    <label class="text-sm font-medium">
+                        <i class="fa-solid fa-scissors fa-flip" style="color: #cbcfd2;"></i>
+                        Trim Controls:</label>
+                        <span id="progress-time" class="text-sm font-medium">0.00 / 10.00</span>
+                    </div>
+                    <div class="range-background2" id="range-background2"></div>
+                    <div class="timeline-container" id="timeline-container">
+                        <div class="range-background" id="range-background"></div>
+                        <div id="start-line" class="line start-line" style="left: 0%;"></div>
+                        <div id="end-line" class="line end-line" style="left: 100%;"></div>
+                        <div id="playback-line" class="playback-line"></div>
+                    </div>
+                    <div class="time-stamp">
+                        <span id="start-time">Start Time: 0.000s</span>
+                        <span class="center-time" id="duration">Duration: 0.000s</span>
+                        <span id="end-time">End Time: 0.000s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between w-full max-w-md mx-auto mt-6 gap-3 sm:gap-6">
+                <!-- Discard Button -->
+                <button type="button" 
+                    class="discardButton inline-flex items-center justify-center w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-3 text-sm sm:text-base font-medium text-center rounded-lg">
+                    <i class="fa-solid fa-trash-can" style="color: #f8d7da; margin-right: 5px;"></i> Discard
+                </button>
+            
+                <!-- Trim Video Button -->
+                <button type="button" id="trimButton" 
+                    class="next-sec-btn inline-flex items-center justify-center w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-3 text-sm sm:text-base font-medium text-center rounded-lg">
+                    Trim Video 
+                    <i class="fa-solid fa-scissors" style="color: #cbcfd2; margin-left: 5px;"></i>
+                </button>
+            </div>
+            
+            
+
+        </div>
+ 
+        <!-- Trimmed Video Preview Section -->
+        <!-- Inside the #preview-section -->
+    <div id="preview-section" class="hidden mt-6">
+        <h2 class="text-lg font-semibold mb-2">Trimmed Video Preview</h2>
+        <video id="trimmedVideo" controls class="w-full rounded shadow"></video>
+    
+    
+    
+        <form id="submitForm" method="post" enctype="multipart/form-data" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="trimmed_video_path" id="trimmed_video_path">
+
+        <input type="file" name="trim_video_file" id="trim_video_file" class="hidden">
+
+        <div class="audio-pred-text w-full max-w-md mt-3">
+            <label for="predict_audio" class="flex">
+                {% comment %} <input type="checkbox" name="predict_audio" id="predict_audio" value="1" class="mr-2"> {% endcomment %}
+                  <div class="checkbox-wrapper-26 mr-3">
+                    <input type="checkbox" id="predict_audio" name="predict_audio" value="1">
+                    <label for="predict_audio">
+                      <div class="tick_mark"></div>
+                    </label>
+                  </div>
+                Want to Predict Audio?
+            </label>
+        </div>
+
+
+
+
+        <!-- Buttons (Discard & Analyze) -->
+        <div class="flex flex-col sm:flex-row justify-between w-full max-w-md mx-auto mt-4 gap-3 sm:gap-6">
+    <!-- Discard Button -->
+        <button type="button" 
+        class="discardButton inline-flex items-center justify-center w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-3 text-sm sm:text-base font-medium text-center rounded-lg">
+        <i class="fa-solid fa-trash-can" style="color: #f8d7da; margin-right: 5px;"></i> Discard
+        </button>
+
+    <!-- Analyze Button -->
+            <button type="submit" 
+        class="next-sec-btn inline-flex items-center justify-center w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-3 text-sm sm:text-base font-medium text-center rounded-lg">
+        Analyze 
+        <i class="fa-solid fa-magnifying-glass-arrow-right" style="color: #cbcfd2; margin-left: 5px;"></i>
+            </button>
+        </div>
+
+        </form>
+
+    </div>
+
+    </div>
+ 
+    {% include 'footer.html' %} 
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let startTime = 0;
+            let endTime = 10;
+            let videoDuration = 0;
+            let videoElement = document.getElementById('uploadedVideo');
+            
+             // Function to validate file format
+        function check_validation(fileExtension) {
+          // Check if the file extension is one of the allowed formats
+          if (["mp4"].indexOf(fileExtension) === -1) {
+           
+            //alert("Only .mp3, .ogg, and .wav files are allowed.");
+            $("#error-message-video").removeClass("hidden").addClass("bounce-effect-error");
+            return false; 
+          }
+          return true; // Valid file extension
+        }
+
+            // Dynamically adjust the width of the timeline-container
+            function adjustTimelineWidth() {
+                const videoWidth = $('#uploadedVideo').width();
+                $('#timeline-container').css('width', videoWidth);
+            }
+        
+            function addAnnotationsToTimeline() {
+                const timelineWidth = $('#timeline-container').width();
+                const annotationsContainer = $('#timeline-container');
+                const numAnnotations = Math.floor(videoDuration); // Number of whole seconds in the video
+                annotationsContainer.find('.annotation-line').remove(); // Clear previous annotations
+        
+                for (let i = 1; i <= numAnnotations; i++) {
+                    const leftPosition = (i / videoDuration) * timelineWidth;
+                    const annotationLine = $('<div class="annotation-line"></div>');
+                    annotationLine.css('left', `${leftPosition}px`);
+                    annotationsContainer.append(annotationLine);
+                }
+            }
+        
+            // Update time display
+            function updateTimeDisplay() {
+                const durationLeft = endTime - startTime;
+                $('#start-time').text(`Start Time: ${(startTime / 100).toFixed(3)}s`);
+                $('#end-time').text(`End Time: ${(endTime / 100).toFixed(3)}s`);
+                $('#duration').text(`Duration: ${(durationLeft / 100).toFixed(3)}s`);
+            }
+        
+            // Update progress bar
+            function updateProgressBar() {
+                // Clamp the videoElement.currentTime within the valid range
+                const clampedCurrentTime = Math.max(startTime, Math.min(videoElement.currentTime, endTime));
+                let progress = ((clampedCurrentTime - startTime) / (endTime - startTime)) * 100;
+            
+                // Update the progress bar width
+                $('#progress-bar').css('width', `${Math.max(0, progress)}%`);
+            
+                // Calculate the current and total time
+                const currentTime = ((clampedCurrentTime - startTime)/100).toFixed(2);
+                const totalTime = ((endTime - startTime)/100).toFixed(2);
+            
+                // Display the progress time
+                $('#progress-time').text(`${currentTime} / ${totalTime}`);
+            }
+            
+            
+        
+            // Update playback line position
+            function updatePlaybackLine() {
+                const timelineWidth = $('#timeline-container').width();
+                const startLeft = (startTime / videoDuration) * timelineWidth;
+                const endLeft = (endTime / videoDuration) * timelineWidth;
+        
+                let playbackLineLeft =
+                    ((videoElement.currentTime - startTime) / (endTime - startTime)) * (endLeft - startLeft) +
+                    startLeft;
+        
+                playbackLineLeft = Math.max(startLeft, Math.min(playbackLineLeft, endLeft));
+                $('#playback-line').css('left', playbackLineLeft);
+            }
+        
+            // Generalized drag handler
+            function setupDragHandler(element, updateCallback) {
+                $(element).on('mousedown', function (e) {
+                    // Add the dragging class
+                    $(this).addClass('dragging');
+        
+                    let initialX = e.pageX;
+                    let initialLeft = $(this).position().left;
+        
+                    $(document).on('mousemove', function (e) {
+                        let deltaX = e.pageX - initialX;
+                        let newLeft = initialLeft + deltaX;
+        
+                        // Call the update callback with the new position
+                        updateCallback(newLeft);
+                    });
+        
+                    $(document).on('mouseup', function () {
+                        // Remove the dragging class
+                        $(element).removeClass('dragging');
+        
+                        // Remove the mousemove and mouseup event listeners
+                        $(document).off('mousemove mouseup');
+                    });
+                });
+            }
+        
+            function updateRangeBackground() {
+                const startLeft = $('#start-line').position().left;
+                const endLeft = $('#end-line').position().left;
+            
+                // Set the color based on the range selection
+                const isFullDuration = startTime === 0 && endTime === videoDuration;
+                const backgroundColor = isFullDuration
+                    ? 'radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66))' // Green gradient
+                    : 'radial-gradient(circle, rgba(255, 0, 0, 0.4), rgba(112, 1, 1, 0.49))'; // Red gradient
+            
+                $('#range-background').css({
+                    left: startLeft,
+                    width: endLeft - startLeft,
+                    background: backgroundColor, // Apply radial gradient
+                });
+            }
+            
+        
+        // Update start line position
+        function updateStartLine(newLeft) {
+            const timelineWidth = $('#timeline-container').width();
+            const endLeft = $('#end-line').position().left;
+
+            // Ensure the gap between start and end time is at least 1 second and the total duration does not exceed 60 seconds
+            newLeft = Math.max(0, Math.min(newLeft, endLeft - (timelineWidth / videoDuration))); // Clamp within bounds
+
+            if ((endTime - newLeft / timelineWidth * videoDuration) > 60) {
+                return; // Prevent moving if duration exceeds 60 seconds
+            }
+
+            $('#start-line').css('left', newLeft);
+
+            startTime = (newLeft / timelineWidth) * videoDuration;
+
+            updateTimeDisplay();
+            updatePlaybackLine();
+            updateProgressBar();
+
+            updateRangeBackground();
+        }
+        
+        // Update end line position
+        function updateEndLine(newLeft) {
+            const timelineWidth = $('#timeline-container').width();
+            const startLeft = $('#start-line').position().left;
+
+            // Ensure the gap between start and end time is at least 1 second and the total duration does not exceed 60 seconds
+            newLeft = Math.max(startLeft + (timelineWidth / videoDuration), Math.min(newLeft, timelineWidth)); // Clamp within bounds
+
+            if ((newLeft / timelineWidth * videoDuration - startTime) > 60) {
+                return; // Prevent moving if duration exceeds 60 seconds
+            }
+
+            $('#end-line').css('left', newLeft);
+
+            endTime = (newLeft / timelineWidth) * videoDuration;
+
+            updateTimeDisplay();
+            updatePlaybackLine();
+            updateProgressBar();
+
+            updateRangeBackground();
+        }
+        
+            // Update playback line position
+            function updatePlaybackLinePosition(newLeft) {
+                const timelineWidth = $('#timeline-container').width();
+                const startLeft = (startTime / videoDuration) * timelineWidth;
+                const endLeft = (endTime / videoDuration) * timelineWidth;
+        
+                newLeft = Math.max(startLeft, Math.min(newLeft, endLeft)); // Clamp within bounds
+                $('#playback-line').css('left', newLeft);
+        
+                videoElement.currentTime =
+                    ((newLeft - startLeft) / (endLeft - startLeft)) * (endTime - startTime) + startTime;
+            }
+        
+            // Attach drag handlers
+            setupDragHandler('#start-line', updateStartLine);
+            setupDragHandler('#end-line', updateEndLine);
+            setupDragHandler('#playback-line', updatePlaybackLinePosition);
+            //setupDragHandler('#progress-bar', updatePlaybackLinePosition);
+        
+            // Handle file selection and video load
+            $('#video_file').on('change', function () {
+                const videoFile = this.files[0];
+                if (videoFile) {
+
+            // ------------------------------------------------------
+            // Get the file extension (in lowercase)
+            const fileExtension = videoFile.name.split('.').pop().toLowerCase();     
+            // Validate the file extension
+            if (!check_validation(fileExtension)) {
+              $(this).val(''); // Reset the input if the file is invalid
+              return; // Exit function early to prevent further processing
+            }
+            // Hide the error message if the file is valid
+           $("#error-message-video").addClass("hidden").removeClass("bounce-effect-error");
+           // ------------------------------------------------------
+
+
+                    const videoURL = URL.createObjectURL(videoFile);
+                    $('#uploadedVideo').attr('src', videoURL);
+                    
+                    videoElement.onloadedmetadata = function () {
+                        videoDuration = videoElement.duration;
+        
+                        // If the video is less than 1 second, show an error message
+                        if (videoDuration <= 1) {
+                            //alert('Video must be longer than 1 second');
+                            Swal.fire({
+                                icon: "error",
+                                title: "File Error",
+                                text: "Video must be longer than 1 second"
+                              });
+                            return;
+                        }
+                        else{
+                            $('#trim-section').removeClass('hidden');
+                            $('#upload-section').addClass('hidden');
+
+                            // Reduce the margin when video is uploaded
+                $('.ai-message').addClass('video-uploaded-msg');
+                        }
+        
+                        endTime = videoDuration >= 60 ? 60 : videoDuration;
+                        $('#end-line').css('left', `${(endTime / videoDuration) * 100}%`);
+        
+                        updateTimeDisplay();
+                        adjustTimelineWidth();
+                        updateProgressBar();
+                        updateRangeBackground();
+                        addAnnotationsToTimeline();
+                    };
+                }
+            });
+        
+            // Add window resize listener
+            $(window).on('resize', adjustTimelineWidth);
+        
+            // Handle video playback to pause at the end time
+            $('#uploadedVideo').on('play', function () {
+                videoElement.currentTime = startTime;
+                let interval = setInterval(function () {
+                    if (videoElement.currentTime >= endTime) {
+                        videoElement.pause();
+                        clearInterval(interval);
+                    }
+                    updatePlaybackLine();
+                    updateProgressBar();
+                }, 100);
+            });
+
+            // Handle Discard Button
+            $('.discardButton').on('click', function () {
+                // Reset the video trimming section
+                $('#uploadedVideo').attr('src', '');
+                $('#trimmedVideo').attr('src', '');
+                $('#trimmed_video_path').val('');
+            
+                // Reset the file input field (Important fix!)
+                $('#video_file').val(''); // This ensures the same file can be uploaded again
+            
+                // Clear the hidden file input for the trimmed video
+                const inputFile = $('#trim_video_file')[0];
+                inputFile.value = ''; // Reset the file input field
+            
+                // Hide preview section and show upload section
+                $('#preview-section').addClass('hidden');
+                $('#trim-section').addClass('hidden');
+                $('#upload-section').removeClass('hidden');
+            
+                // Reset the margin to center again
+                $('.ai-message').removeClass('video-uploaded-msg');
+
+                          // -------------------- Hide the error message if discarded --------------------
+          $("#error-message-video").addClass("hidden").removeClass("bounce-effect-error");
+    
+            });
+            
+
+        
+            // Handle trim button click (remains the same as before)
+            $('#trimButton').on('click', function () {
+                const videoFile = $('#video_file')[0].files[0];
+                if (!videoFile) {
+                    //alert('Please select a video file.');
+                    Swal.fire({
+                        icon: "error",
+                        title: "File Not Found",
+                        text: "Please Select a video file"
+                      });
+                    return;
+                }
+        
+                const formData = new FormData();
+                formData.append('video_file', videoFile);
+                formData.append('start_time', startTime);
+                formData.append('end_time', endTime);
+
+                // Show overlay loader
+                $('#load-overlay').show();
+        
+                $.ajax({
+                    url: '/videodf/trim_video/',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+
+                        if (response.trimmed_video_path) {
+                            const videoUrl = `/media/${response.trimmed_video_path}`;
+                            $('#trimmedVideo').attr('src', videoUrl).show();
+                            $('#trimmed_video_path').val(response.trimmed_video_path);
+
+                     // Extract the file name from the path (after the last slash or backslash)
+                const fileName = response.trimmed_video_path.split('/').pop().split('\\').pop();
+
+                // Create a Blob for the trimmed video to populate the file input
+                fetch(videoUrl)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        // Create a file from the blob
+                        const file = new File([blob], fileName, { type: 'video/mp4' });
+
+                        // Create a DataTransfer object to simulate file input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file); // Add the file to the DataTransfer object
+
+                        // Assign the file to the input field
+                        const inputFile = $('#trim_video_file')[0];
+                        inputFile.files = dataTransfer.files;  // This will "set" the file input field
+                    });
+
+
+                            $('#preview-section').removeClass('hidden');
+
+                            $('#trim-section').addClass('hidden');
+                            $('#upload-section').addClass('hidden');
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Trimming Error",
+                                text: "Please try trimming the video again."
+                              });
+                            //alert('Error in trimming video.');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error",
+                            text: "An error occurred: "+error
+                          });
+                        //alert('An error occurred: ' + error);
+                    },
+                    complete: function() {
+                        // Hide the overlay loader when trimming is done
+                        $('#load-overlay').hide();
+                    }
+                });
+            });
+
+ // submit
+ $("form").on("submit", function (e) {
+    $('.overlay_d').show();
+  });
+
+
+    // Typing Effect
+
+    const typingElement = document.getElementById("typingText");
+
+    const messages = [
+      "Want to verify if a video is real or fake?",
+      "Upload now and let AI do the magic!",
+    ];
+  
+    let currentMessageIndex = 0;
+    let currentCharIndex = 0;
+    let isErasing = false;
+  
+    const typingSpeed = 100; // Typing speed in milliseconds
+    const erasingSpeed = 50; // Erasing speed in milliseconds
+    const delayBetweenMessages = 2000; // Delay between messages
+  
+    function typeEffect() {
+      const currentMessage = messages[currentMessageIndex];
+  
+      if (!isErasing) {
+        // Typing the message
+        typingElement.textContent = currentMessage.substring(
+          0,
+          currentCharIndex++
+        );
+        if (currentCharIndex > currentMessage.length) {
+          setTimeout(() => {
+            isErasing = true;
+            typeEffect();
+          }, delayBetweenMessages);
+        } else {
+          setTimeout(typeEffect, typingSpeed);
+        }
+      } else {
+        // Erasing the message
+        typingElement.textContent = currentMessage.substring(
+          0,
+          currentCharIndex--
+        );
+        if (currentCharIndex < 0) {
+          isErasing = false;
+          currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+          typeEffect();
+        } else {
+          setTimeout(typeEffect, erasingSpeed);
+        }
+      }
+    }
+  
+    typeEffect();
+
+        });
+        
+        
+     </script>
+ </body>
+ </html>
+ 
+
+
+

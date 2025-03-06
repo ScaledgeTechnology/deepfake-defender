@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: radial-gradient(
+                circle at 30% 70%,
+                #000513 0%,      
+                #010A12 15%,      
+                #010E14 30%,      
+                #001A0D 50%,      
+                #030815 70%,      
+                #050A18 85%,      
+                #000000 100%      
+            );
+            color: #cbcfd2; /* Text color */
+            font-family: Arial, sans-serif;
+        }
+        h1, h2 {
+            color: #00a36e; /* Headings color */
+        }
+        .box {
+            position: relative;
+            border: 2px solid #00a36e;
+            padding: 0;
+            text-align: center;
+            overflow: hidden;
+            background-color: #aeb9be;
+            height: 300px;
+            border-radius: 10px;
+        }
+        
+        .box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        
+        .box:hover img {
+            transform: scale(1.2); /* Zooms image inside box */
+        }
+        
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25%; /* Initially at bottom */
+            background: rgba(0, 0, 0, 0.7);
+            color: #cbcfd2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            opacity: 1;
+            transition: all 0.4s ease;
+            padding: 10px;
+        }
+        
+        .box:hover .overlay {
+            height: 100%; /* Expands to cover whole box */
+            bottom: 0;
+            align-items: center; /* Moves text to center */
+        }
+        .para_text{
+            color: #aeb9be;
+        }
+        
+        /* Utility Class */
+        .whole-section {
+          min-height: calc(100vh - 140px);
+        }
+  
+        @media (max-width: 667px) { 
+            .reverse-container{
+                display: flex;
+                flex-direction: column-reverse;
+        }
+    }
+    </style>
+</head>
+<body>
+    {% include 'nav-bar.html' %} 
+    
+    <div class="whole-section">
+
+    <div class="text-center py-10 bg-gray-800 shadow-lg">
+        <h1 class="text-4xl font-bold">Service</h1>
+        <p class="text-lg mt-4">We provide the best solutions to detect deepfakes effectively.</p>
+    </div>
+
+    <div class="container mx-auto py-10 space-y-10">
+        <!-- Video DeepFake Service -->
+        <div class="flex flex-col-reverse md:grid md:grid-cols-1 md:grid-cols-2 gap-10 px-6">
+            <div class="box"> 
+                <img src="{% static 'images/video_face.jpg' %}" alt="Video DeepFake">
+                <div class="overlay">Our advanced video deepfake detection algorithms analyze frame-by-frame inconsistencies to detect manipulated content with high accuracy.</div>
+            </div>
+            <div>
+                <h2 class="text-2xl font-semibold">Video DeepFake Service</h2>
+                <p class="mt-2 text-justify para_text">
+                    Our service helps identify fake videos by analyzing facial expressions, lighting inconsistencies, and digital artifacts. 
+                    Using AI-powered detection tools, we ensure that manipulated content is exposed, protecting your business from misinformation and fraud.
+                </p>
+            </div>
+        </div>
+
+        <!-- Image DeepFake Service -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 px-6">
+            <div>
+                <h2 class="text-2xl font-semibold">Image DeepFake Service</h2>
+                <p class="mt-2 text-justify para_text">
+                    We provide a reliable solution to identify deepfake images by analyzing lighting inconsistencies, face morphing techniques, 
+                    and digital fingerprints that indicate tampering. Our AI-powered detection ensures the authenticity of images shared online.
+                 </p>
+            </div>
+            <div class="box"> 
+                <img src="{% static 'images/image_face.jpg' %}" alt="Image DeepFake">
+               
+                <div class="overlay">Our AI-driven solution can detect manipulated images by analyzing pixel-level discrepancies and metadata inconsistencies.</div>
+            </div>
+        </div>
+
+        <!-- Audio DeepFake Service -->
+        <div class="flex flex-col-reverse md:grid md:grid-cols-1 md:grid-cols-2 gap-10 px-6">
+            <div class="box"> 
+                <img src="{% static 'images/audio_face.jpg' %}" alt="Audio DeepFake">
+                <div class="overlay">
+                    Protect your identity and prevent audio manipulation with our state-of-the-art voice recognition solutions.</div>
+            </div>
+            <div>
+                <h2 class="text-2xl font-semibold">Audio DeepFake Service</h2>
+                <p class="mt-2 text-justify para_text">
+                    Our cutting-edge audio deepfake detection system identifies artificially generated voice recordings. 
+                    We use spectrogram analysis and machine learning models to detect anomalies in voice modulation, tone, and pitch to safeguard against voice fraud.
+               </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center py-10">
+        <p class="text-lg para_text">Get in touch to learn more about our services.</p>
+    </div>
+
+</div>
+    {% include 'footer.html' %} 
+</body>
+</html>

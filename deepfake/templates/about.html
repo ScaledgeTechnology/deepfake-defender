@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Defender: About</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* General Styles */
+        body {
+            background: radial-gradient(
+                circle at 30% 70%, 
+                #000513 0%,       
+                #010A12 15%,      
+                #010E14 30%,       
+                #001A0D 50%,      
+                #030815 70%,      
+                #050A18 85%,      
+                #000000 100%      
+            );
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #cbcfd2;
+        }
+
+        .whole-section {
+            min-height: calc(100vh - 140px);
+        }
+
+        /* Active Card */
+        .outer {
+            width: 400px;
+            height: 500px; /* Dynamic height */
+            border-radius: 10px;
+            padding: 1px;
+            background: radial-gradient(circle 230px at 0% 0%, #00744e, #02704b);
+            position: relative;
+            margin-bottom: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+        }
+
+        .dot {
+            width: 7px;
+            aspect-ratio: 1;
+            position: absolute;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px #ffffff;
+            border-radius: 100px;
+            z-index: 2;
+            right: 10%;
+            top: 10%;
+            animation: moveDot 6s linear infinite;
+        }
+
+        @keyframes moveDot {
+            0%, 100% { top: 10%; right: 10%; }
+            25% { top: 10%; right: calc(100% - 43px); }
+            50% { top: calc(100% - 55px); right: calc(100% - 43px); }
+            75% { top: calc(100% - 55px); right: 10%; }
+        }
+
+        .card {
+            width: 100%;
+            height: 100%; /* Allow card to expand */
+            border-radius: 9px;
+            border: solid 1px #202222;
+            background-size: 20px 20px;
+            background: radial-gradient(circle 280px at 0% 0%, #00744e, #001612);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+   
+       
+            /* text-align: center; */
+            position: relative;
+       
+    
+        }
+
+        .ray {
+            width: 220px;
+            height: 45px;
+            border-radius: 100px;
+            position: absolute;
+            background-color: #67b87f;
+            opacity: 0.4;
+            box-shadow: 0 0 50px #a8ffa5;
+            filter: blur(10px);
+            transform-origin: 10%;
+            top: 5%;
+            left: 10%;
+            transform: rotate(40deg);
+        }
+
+        .card .text {
+            font-weight: bolder;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #cfcdcd 4%, #fff, #000);
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            font-size: 1rem;
+            max-width: 75%;
+            text-align: center;
+            font-weight: 100;
+            color: #aeb9be;
+        }
+
+        .line {
+            width: 100%;
+            height: 1px;
+            position: absolute;
+            background-color: #4d4d4d;
+        }
+
+        .topl { top: 10%; background: linear-gradient(90deg, #888888 30%, #383a3a 70%); }
+        .bottoml { bottom: 10%; }
+        .leftl {
+            left: 10%;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(180deg, #a8a8a8 30%, #4d4d4d 70%);
+        }
+        .rightl {
+            right: 10%;
+            width: 1px;
+            height: 100%;
+        }
+
+        /* Container for all cards */
+        .container-x {
+            position: relative;
+            display: flex;
+            bottom: 20px;
+            margin-top:50px;
+        }
+
+        .container-x .glass {
+            position: relative;
+            width: 180px;
+            height: 200px;
+            /* background: linear-gradient(#fff2, transparent); */
+            background: radial-gradient(circle, rgba(0, 163, 109, 0.38), rgba(17, 67, 50, 0.47));
+            box-shadow: 0 25px 25px rgba(67, 64, 64, 0.25);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.5s;
+            border-radius: 10px;
+            margin: 0 -45px;
+            backdrop-filter: blur(10px);
+            transform: rotate(calc(var(--r) * 1deg));
+            cursor: pointer;
+            flex-direction: column;
+            text-align: center;
+            padding: 15px;
+            z-index: 1;
+            color:#ffffff;
+        }
+
+        .container-x .glass.active {
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(86, 242, 161, 0.8);
+        }
+
+        .container-x:hover .glass {
+            transform: rotate(0deg);
+            margin: 0 10px;
+        }
+
+        .container-x .glass::before {
+            content: attr(data-text);
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            border-radius: 10px;
+        }
+
+        /* Hidden content */
+        .card-text {
+            display: none;
+        }
+
+        .main-heading {
+            color: #00a36e;
+        }
+        
+        /* @media (max-width: 430px) {
+            .whole-section {
+                zoom: 60%;
+            }
+        } */
+
+    </style>
+</head>
+<body>
+    {% include 'nav-bar.html' %} 
+
+    <div class="whole-section flex flex-col items-center justify-center px-4">
+
+        <div class="w-full max-w-7xl text-center">
+            <!-- Heading -->
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 mt-3 main-heading">About Deepfake</h1>
+
+            <!-- Description -->
+            <p class="text-base mb-12 leading-relaxed main-paragraph px-4 text-justify">
+                Deepfake technology is revolutionizing the way media is created, using artificial intelligence to generate hyper-realistic videos, images, and audio that can be nearly impossible to distinguish from reality. While this innovation brings incredible creative opportunities, it also introduces serious risks—misinformation, identity fraud, and privacy breaches are just a few of the challenges. At Detect AI, we are committed to staying ahead of this rapidly evolving technology, providing powerful tools that help users detect and prevent malicious deepfake content. Our goal is to ensure digital authenticity, giving you the confidence to trust what you see and hear in an age where manipulation is just a click away.
+            </p>
+
+</div>
+
+        <!-- Active Card -->
+        <div class="outer">
+            <div class="dot"></div>
+            <div class="card">
+                <div class="ray"></div>
+                <div class="text" id="activeTitle">Our Mission</div>
+                <div class="content" id="activeText">
+                    We believe in a digital world where truth is protected and deception has no place. Our mission is to equip individuals, businesses, and organizations with cutting-edge AI-driven deepfake detection, ensuring that media remains authentic and trustworthy. By combining advanced technology with a user-friendly experience, we empower everyone to safeguard their content and make informed decisions in an era where artificial intelligence can blur the lines between real and fake.
+                </div>
+                <div class="line topl"></div>
+                <div class="line leftl"></div>
+                <div class="line bottoml"></div>
+                <div class="line rightl"></div>
+            </div>
+        </div>
+
+        <!-- Cards -->
+        <div class="container-x">
+            <div data-text="Read more" style="--r:-15;" class="glass" onclick="activateCard(this)">
+                <h4>Our Mission</h4>
+                <p class="card-text">We believe in a digital world where truth is protected and deception has no place. Our mission is to equip individuals, businesses, and organizations with cutting-edge AI-driven deepfake detection, ensuring that media remains authentic and trustworthy. By combining advanced technology with a user-friendly experience, we empower everyone to safeguard their content and make informed decisions in an era where artificial intelligence can blur the lines between real and fake.</p>
+            </div>
+            <div data-text="Read more" style="--r:5;" class="glass" onclick="activateCard(this)">
+                <h4>Our Vision</h4>
+                <p class="card-text">We envision a future where no one has to second-guess the authenticity of the content they consume. Our dream is to make deepfake detection accessible to all, providing a seamless and efficient way to verify digital media. Whether you’re an individual protecting your identity, a journalist verifying sources, or a business ensuring brand integrity, we strive to create a world where misinformation is no longer a threat, and trust in digital content is restored.</p>
+            </div>
+            <div data-text="Read more" style="--r:25;" class="glass" onclick="activateCard(this)">
+                <h4>Our Values</h4>
+                <p class="card-text">At the core of everything we do is a deep commitment to innovation, integrity, and security. We continuously push the boundaries of AI to develop smarter and more effective detection solutions. Transparency and honesty are the foundation of our approach, ensuring that users always have reliable and unbiased tools at their fingertips. Above all, we prioritize safety, working tirelessly to provide a digital environment where users can confidently engage without the fear of being deceived.</p>
+            </div>
+        </div>
+
+
+        <div class="w-full max-w-7xl text-center">
+            <!-- Heading -->
+            <h1 class="text-1xl md:text-2xl font-bold mb-4 mt-10 main-heading">Why Choose Us?</h1>
+
+            <!-- Description -->
+            <p class="text-base mb-12 leading-relaxed main-paragraph px-4 text-justify">
+                With the rise of AI-generated media, detecting deepfakes is more crucial than ever. At Detect AI, we don’t just provide a tool—we offer a complete solution designed for accuracy, speed, and ease of use. Our advanced AI algorithms are built to analyze even the most sophisticated manipulations, giving you reliable results in seconds. Whether you’re a journalist uncovering the truth, a business protecting its brand, or an individual safeguarding your identity, we ensure that you stay one step ahead of digital deception. With a seamless interface, top-tier security, and continuous updates to combat evolving threats, Detect AI is your trusted partner in the fight for digital authenticity
+            </p>
+
+</div>
+
+
+    </div>
+
+
+    {% include 'footer.html' %} 
+
+    <script>
+         document.addEventListener("DOMContentLoaded", function () {
+            // Find the card with "Our Mission" and activate it by default
+            let defaultCard = [...document.querySelectorAll('.glass')].find(card =>
+                card.querySelector("h4").innerText === "Our Mission"
+            );
+            activateCard(defaultCard);
+        });
+
+        function activateCard(card) {
+            // Find all glass cards and remove active class
+            const allCards = document.querySelectorAll('.glass');
+            allCards.forEach(c => c.classList.remove('active'));
+
+            // Add active class to the clicked card
+            card.classList.add('active');
+
+            // Get the title and content from the clicked card
+            const title = card.querySelector('h4').textContent;
+            const content = card.querySelector('.card-text').textContent;
+
+            // Update the active card
+            document.getElementById('activeTitle').textContent = title;
+            document.getElementById('activeText').textContent = content;
+
+            // Animate the clicked card to the top
+            const outer = document.querySelector('.outer');
+            outer.style.transition = 'transform 0.5s ease';
+            outer.style.transform = 'translateY(-20px)';
+            
+            // Reset the position after animation
+            setTimeout(() => {
+                outer.style.transform = 'translateY(0)';
+            }, 500);
+        }
+    </script>
+</body>
+</html>

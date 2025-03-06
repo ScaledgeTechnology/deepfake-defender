@@ -1,0 +1,32 @@
+<!-- Copyright Section -->
+ <!DOCTYPE html>
+{% comment %} {% load static tailwind_tags %} {% endcomment %}
+ <html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+    {% comment %} {% tailwind_css %} {% endcomment %}
+    <style>
+      footer {
+        background:#0b2020;
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+
+      }
+  
+      footer p {
+        margin: 0;
+          color: #aeb9be;
+      }
+    </style>
+ </head>
+ <body>
+    <!-- Footer (Fixed at Bottom) -->
+    <footer class="py-4 mt-auto">
+      <p class="text-sm">&copy; 2025 Scaledge, Inc. All rights reserved</p>
+    </footer>
+ </body>
+ </html>

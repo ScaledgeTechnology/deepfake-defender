@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Audio</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <style>
+      /* Global Body Style */
+      body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(
+          circle at 30% 70%,
+          #000513 0%,
+          #011709 15%,
+          #010e14 30%,
+          #001a0d 50%,
+          #030815 70%,
+          #050a18 85%,
+          #000000 100%
+        );
+        color: #cbcfd2;
+        font-family: Arial, sans-serif;
+        min-height: 100vh;
+      }
+      /* Upload Icon with AI Animation */
+      .upload-icon {
+        background: radial-gradient(circle, rgb(0, 163, 109), rgb(17, 67, 50));
+        border: 1px solid rgba(5, 177, 57, 0.19);
+        color: #cbcfd2;
+        padding: 1rem;
+        border-radius: 50%;
+        font-size: 2rem;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        animation: pulseGlow 3s ease-in-out infinite;
+      }
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          box-shadow: 0 0 10px rgba(0, 163, 109, 0.84),
+            0 0 20px rgba(17, 67, 50, 0.84);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(0, 104, 69, 0.84),
+            0 0 30px rgba(0, 219, 146, 0.84);
+        }
+      }
+      /* Upload Text with Animation */
+      .upload-text {
+        margin-top: 1rem;
+        color: #aeb9be;
+        font-size: 1.2rem;
+        font-weight: bold;
+        animation: textGlow 2s ease-out;
+      }
+      @keyframes textGlow {
+        0% {
+          color: rgba(255, 255, 255, 0);
+          transform: translateY(-20px);
+        }
+        100% {
+          color: #aeb9be;
+          transform: translateY(0);
+        }
+      }
+      /* Shared Button Styles */
+      .next-sec-btn,
+      .discardButton {
+        cursor: pointer;
+        background: transparent;
+        letter-spacing: 1px;
+        font-weight: 700;
+        transform: scale(1.03);
+        transition: background 0.3s ease, color 0.3s ease,
+          transform 0.3s ease-in-out;
+        position: relative;
+        overflow: hidden;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+      }
+      /* Submit Button (Green) */
+      .next-sec-btn {
+        color: #00a36e;
+        border: 2px solid #00a36e;
+      }
+      .next-sec-btn:hover {
+        background: radial-gradient(
+          circle,
+          rgba(0, 163, 109, 0.69),
+          rgba(17, 67, 50, 0.66)
+        );
+        color: #cbcfd2;
+        transform: scale(1);
+      }
+      .next-sec-btn:hover i {
+        animation: shake-icon 0.5s ease-in-out;
+      }
+      /* Discard Button (Red) */
+      .discardButton {
+        color: #d9534f;
+        border: 2px solid #d9534f;
+      }
+      .discardButton:hover {
+        background: radial-gradient(
+          circle,
+          rgba(200, 50, 50, 0.7),
+          rgba(150, 30, 30, 0.6)
+        );
+        color: #f8d7da;
+        transform: scale(1);
+      }
+      .discardButton:hover i {
+        animation: shake-icon 0.5s ease-in-out;
+      }
+
+      .next-sec-btn:focus, .discardButton:focus {
+        outline: none;
+        box-shadow: 0 0 15px rgba(174, 167, 167, 0.46), 0 0 30px rgba(86, 82, 82, 0.45);
+    }
+    
+      @keyframes shake-icon {
+        0% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        50% {
+          transform: translateX(5px);
+        }
+        75% {
+          transform: translateX(-5px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+
+      /* AI Message Section */
+      .ai-message {
+        font-size: 1.8rem;
+        margin: 3rem 0 1rem;
+        font-weight: bold;
+        text-align: center;
+        color: #00a36e;
+        text-shadow: 1px 1px 2px rgba(37, 104, 82, 0.84);
+        animation: fadeInSlideUp 3s ease-in-out;
+      }
+      @keyframes fadeInSlideUp {
+        0% {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .cursor {
+        font-weight: normal;
+        animation: blink 0.6s infinite;
+        color: #00a36e;
+      }
+      
+      /* Cursor Blinking Effect */
+      @keyframes blink {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+      
+
+      
+
+      /* Utility Class */
+      .whole-section {
+        min-height: calc(100vh - 140px);
+      }
+
+      /* --- Audio Preview Customization --- */
+      /* For WebKit browsers (Chrome, Safari, Edge) */
+      audio::-webkit-media-controls-panel {
+        background-color:rgb(93, 148, 121) !important;
+
+      }
+      /* For Firefox – limited support */
+      audio::-moz-media-controls-panel {
+        background-color:rgb(122, 124, 126) !important;
+
+      }
+
+
+      /* Utility Class */
+      .whole-section {
+        min-height: calc(100vh - 140px);
+      }
+
+
+
+
+
+
+    /* --------------- */
+    /* Bouncing effect */
+
+    @keyframes bounceLeftToRight {
+      0% {
+        transform: translateX(0);
+      }
+      50% {
+        transform: translateX(10px);
+      }
+      100% {
+        transform: translateX(0);
+      }
+    }
+    
+    @keyframes bounceRightToLeft {
+      0% {
+        transform: translateX(0);
+      }
+      50% {
+        transform: translateX(-10px);
+      }
+      100% {
+        transform: translateX(0);
+      }
+    }
+    
+    /* Apply the bouncing effect once */
+    .bounce-effect-error {
+      animation: bounceLeftToRight 0.3s ease-in-out 0s 2; /* Run the animation once */
+    }
+    
+    .bounce-effect-error.reverse {
+      animation: bounceRightToLeft 0.3s ease-in-out 0s 2; /* Run the animation once */
+    }
+    
+
+    /* submitting loader */
+
+    .overlay_d {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.75);
+      z-index: 9999; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      display: none; 
+  }
+
+    .loader_d {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+  }
+
+  /* Glow effect */
+  /* .glow_d {
+    box-shadow: rgba(255, 255, 255, 0.199) 0px 50px 100px -20px, 
+      rgba(255, 255, 255, 0.233) 0px 30px 60px -30px, 
+      rgba(200, 200, 255, 0.15) 0px -2px 6px 0px inset;
+  } */
+
+
+  .scanner-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Style for corner boxes */
+.corner {
+  position: absolute;
+  width: 40px; 
+  height: 4px;
+  background-color: #00a36e; 
+}
+.corner-2 {
+  position: absolute;
+  width: 4px; 
+  height: 40px; 
+  background-color: #00a36e; 
+}
+
+.top-left {
+  top: 0;
+  left: 0;
+}
+
+.top-right {
+  top: 0;
+  right: 0;
+}
+
+.bottom-left {
+  bottom: 0;
+  left: 0;
+}
+
+.bottom-right {
+  bottom: 0;
+  right: 0;
+}
+
+.top-left-down {
+  top: 0;
+  left: 0;
+}
+
+.top-right-down {
+  top: 0;
+  right: 0;
+}
+
+.bottom-left-up {
+  bottom: 0;
+  left: 0;
+}
+
+.bottom-right-up {
+  bottom: 0;
+  right: 0;
+}
+
+  /* Fill effect */
+  .fill-effect_d {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      transform: scaleY(0);
+      transform-origin: top;
+      animation: fillEffect_d 2s linear infinite, alternateFill 4s linear infinite;
+  }
+
+  @keyframes fillEffect_d {
+      0% {
+          transform: scaleY(0);
+      }
+      100% {
+          transform: scaleY(1);
+      }
+  }
+
+  @keyframes alternateFill {
+      0%, 50% {
+          background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+      }
+      51%, 100% {
+          background: radial-gradient(circle, rgba(163, 0, 0, 0.69), rgba(67, 17, 17, 0.66));
+      }
+  }
+
+  /* Alternating scan bar */
+  .scan-bar {
+      position: absolute;
+      height: 4px;
+      width: 100%;
+      background: rgba(0, 255, 0, 1);
+      z-index: 99;
+      animation: scanTopToBottom 2s linear infinite, alternateColor 4s linear infinite;
+  }
+
+  @keyframes scanTopToBottom {
+      0% {
+          top: 0;
+      }
+
+      100% {
+          top: 100%;
+      }
+  }
+
+  @keyframes alternateColor {
+      0%, 50% {
+          background: rgb(6, 186, 75);
+          box-shadow: 0 0 20px rgba(0, 255, 0, 1), 0 0 30px rgba(0, 255, 0, 0.8);
+      }
+      51%, 100% {
+          background: rgb(176, 25, 11);
+          box-shadow: 0 0 20px rgba(255, 0, 0, 1), 0 0 30px rgba(255, 0, 0, 0.8);
+      }
+  }
+
+  /* AI face container */
+  .face {
+      position: relative;
+      width: 190px; /* Smaller size */
+      height: 190px; /* Smaller size */
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* animation: fastShake 1s infinite; */
+      overflow: hidden; /* Ensures the image stays within the div */
+      /* border-radius: 50%; */
+  }
+  .face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 90;
+  animation: zoomInOut 3s infinite ease-in-out;
+}
+
+/* Zoom In-Out Animation */
+@keyframes zoomInOut {
+  0%, 100% { transform: scale(1); } /* Normal size */
+  50% { transform: scale(1.2); } /* Zoom in slightly */
+}
+
+ /* Text below container */
+.analyzing-text {
+  margin-top: 10px; 
+  font-size: 1rem; 
+  font-weight: bold;
+  text-align: center;
+  color: #aeb9be;
+  white-space: nowrap; 
+  overflow: hidden; 
+  width: 0; 
+  animation: wait-type 3s infinite; 
+}
+
+/* Typing effect animation */
+
+
+@keyframes wait-type {
+      0% {
+          width: 0;
+      }
+      99% {
+          width: 100%;
+      }
+      100% {
+          width: 0; 
+      }
+  }
+
+
+
+  /* --------------- */
+    </style>
+  </head>
+  <body>
+    {% include 'nav-bar.html' %}
+
+
+
+
+<!-- Submitting loader -->
+<div class="overlay_d">
+    <div id="loader_d" class="loader_d text-center">
+      <!-- Scanner Container -->
+      <div class="scanner-container glow_d">
+        <!-- Fill Effect -->
+        <div class="fill-effect_d"></div>
+  
+        <!-- Scanning Bar -->
+        <div class="scan-bar"></div>
+  
+        <!-- Face -->
+         <!-- Face -->
+         <div class="face">
+          <img src='{% static "images/AI_audio_scan.jpg" %}' alt="Face Image">
+      </div>
+  
+        <!-- Corner Boxes -->
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+
+        <div class="corner-2 top-left-down"></div>
+        <div class="corner-2 top-right-down"></div>
+        <div class="corner-2 bottom-left-up"></div>
+        <div class="corner-2 bottom-right-up"></div>
+
+      </div>
+  
+      <!-- Analyzing Text -->
+      <div class="analyzing-text">
+        Analyzing your Audio . . .
+      </div>
+    </div>
+  </div>
+
+
+    <div class="whole-section max-w-3xl mx-auto p-6">
+      <div class="ai-message">
+        <span id="typingText2"></span>
+        <span class="cursor">|</span>
+      </div>
+
+      <!-- Upload Section: Initially displayed -->
+      <div id="upload-section" class="flex flex-col items-center">
+        <label for="audio_file_upload" class="cursor-pointer flex flex-col items-center p-4">
+          <div class="upload-icon">
+            <i class="fa-solid fa-upload"></i>
+          </div>
+          <span class="upload-text">Click to Upload Audio</span>
+          <!-- Note: This file input is OUTSIDE the form -->
+          <input type="file" id="audio_file_upload" class="hidden" accept="audio/*" />
+        </label>
+      </div>
+
+      <div id="error-message-audio" class="text-[#B50505] hidden font-bold text-center mt-2 bounce-effect-error">
+        Unsupported file format (Only .mp3, .ogg, and .wav files are allowed).
+      </div>
+
+      <!-- Preview Section: Hidden until a file is selected -->
+      <div id="preview-section" class="hidden flex flex-col items-center mt-4">
+        <audio id="uploadedAudio" controls class="w-3/4"></audio>
+      </div>
+
+      <!-- Form Section: Hidden until a file is selected -->
+      <form id="submitForm" method="post" enctype="multipart/form-data" class="hidden mt-4">
+        {% csrf_token %}
+        <!-- The file input will be moved here dynamically -->
+        <div id="hidden-input-container"></div>
+        <div class="flex flex-col sm:flex-row justify-between w-full max-w-md mx-auto mt-4 gap-3 sm:gap-6">
+          <!-- Discard Button -->
+          <button type="button" class="discardButton inline-flex items-center justify-center w-full sm:w-auto">
+            <i class="fa-solid fa-trash-can" style="color: #f8d7da; margin-right: 5px;"></i>
+            Discard
+          </button>
+          <!-- Submit Button -->
+          <button type="submit" class="next-sec-btn inline-flex items-center justify-center w-full sm:w-auto">
+            Submit
+            <i class="fa-solid fa-check" style="color: #cbcfd2; margin-left: 5px;"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    {% include 'footer.html' %} 
+    <script>
+      $(document).ready(function () {
+
+        // Function to validate file format
+        function check_validation(fileExtension) {
+          // Check if the file extension is one of the allowed formats
+          if (["mp3", "ogg", "wav"].indexOf(fileExtension) === -1) {
+           
+            //alert("Only .mp3, .ogg, and .wav files are allowed.");
+            $("#error-message-audio").removeClass("hidden").addClass("bounce-effect-error");
+            return false; 
+          }
+          return true; // Valid file extension
+        }
+    
+        // When an audio file is selected, display its preview and move the input into the form
+        $("#audio_file_upload").on("change", function () {
+          const file = this.files[0];
+          if (file) {
+
+            // ------------------------------------------------------
+            // Get the file extension (in lowercase)
+            const fileExtension = file.name.split('.').pop().toLowerCase();     
+            // Validate the file extension
+            if (!check_validation(fileExtension)) {
+              $(this).val(''); // Reset the input if the file is invalid
+              return; // Exit function early to prevent further processing
+            }
+            // Hide the error message if the file is valid
+           $("#error-message-audio").addClass("hidden").removeClass("bounce-effect-error");
+           // ------------------------------------------------------
+    
+            // Display audio preview using FileReader
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              $("#uploadedAudio").attr("src", e.target.result);
+              $("#preview-section").removeClass("hidden");
+              $("#submitForm").removeClass("hidden");
+              $("#upload-section").addClass("hidden");
+            };
+            reader.readAsDataURL(file);
+    
+            // Detach the file input from the upload section
+            const fileInput = $(this).detach();
+            fileInput.attr("name", "audio_file");
+            fileInput.attr("id", "audio_file");
+            // Append it to the hidden container inside the form
+            $("#hidden-input-container").append(fileInput);
+          }
+        });
+    
+        // Discard button: Reset file input and return to the initial view
+        $(".discardButton").on("click", function () {
+          // Remove the file input from the form
+          $("#hidden-input-container").empty();
+          // Reset preview
+          $("#uploadedAudio").attr("src", "");
+          $("#preview-section").addClass("hidden");
+          $("#submitForm").addClass("hidden");
+
+          // -------------------- Hide the error message if discarded --------------------
+          $("#error-message-audio").addClass("hidden").removeClass("bounce-effect-error");
+    
+
+          // Recreate the file input and put it back into the upload section
+          const newInput = $('<input type="file" id="audio_file_upload" class="hidden" accept="audio/*" />');
+          $("#upload-section").find("label").append(newInput);
+          $("#upload-section").removeClass("hidden");
+    
+          // Reattach the change event for validation on the new file input
+          newInput.on("change", function () {
+            const file = this.files[0];
+            if (file) {
+              // Get the file extension (in lowercase)
+              const fileExtension = file.name.split('.').pop().toLowerCase();
+    
+              // Validate the file extension
+              if (!check_validation(fileExtension)) {
+                $(this).val(''); // Reset the input if the file is invalid
+                return; // Exit function early to prevent further processing
+              }
+    
+              // Display audio preview using FileReader
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                $("#uploadedAudio").attr("src", e.target.result);
+                $("#preview-section").removeClass("hidden");
+                $("#submitForm").removeClass("hidden");
+                $("#upload-section").addClass("hidden");
+              };
+              reader.readAsDataURL(file);
+    
+              // Detach the file input from the upload section
+              const fileInput = $(this).detach();
+              fileInput.attr("name", "audio_file");
+              fileInput.attr("id", "audio_file");
+              // Append it to the hidden container inside the form
+              $("#hidden-input-container").append(fileInput);
+            }
+          });
+        });
+    
+        // Submit event
+        $("form").on("submit", function (e) {
+          $('.overlay_d').show();
+        });
+
+ // Typing Effect
+
+ const typingElement = document.getElementById("typingText2");
+
+ const messages = [
+   "Not sure if a voice is real or cloned?",
+   "Upload now and uncover the reality!",
+ ];
+
+ let currentMessageIndex = 0;
+ let currentCharIndex = 0;
+ let isErasing = false;
+
+ const typingSpeed = 100; // Typing speed in milliseconds
+ const erasingSpeed = 50; // Erasing speed in milliseconds
+ const delayBetweenMessages = 2000; // Delay between messages
+
+ function typeEffect() {
+   const currentMessage = messages[currentMessageIndex];
+
+   if (!isErasing) {
+     // Typing the message
+     typingElement.textContent = currentMessage.substring(
+       0,
+       currentCharIndex++
+     );
+     if (currentCharIndex > currentMessage.length) {
+       setTimeout(() => {
+         isErasing = true;
+         typeEffect();
+       }, delayBetweenMessages);
+     } else {
+       setTimeout(typeEffect, typingSpeed);
+     }
+   } else {
+     // Erasing the message
+     typingElement.textContent = currentMessage.substring(
+       0,
+       currentCharIndex--
+     );
+     if (currentCharIndex < 0) {
+       isErasing = false;
+       currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+       typeEffect();
+     } else {
+       setTimeout(typeEffect, erasingSpeed);
+     }
+   }
+ }
+
+ typeEffect();
+
+
+
+      });
+    </script>
+  </body>
+</html>

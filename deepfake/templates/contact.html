@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepFake Defender: Contact Us</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body{
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(
+                circle at 30% 70%, 
+                #000513 0%,
+                #011709 15%,       
+                 /*  #010A12 15%,       */
+                #010E14 30%,       
+                #001A0D 50%,      
+                #030815 70%,      
+                #050A18 85%,      
+                #000000 100%      
+            );
+            color: #cbcfd2; 
+            font-family: Arial, sans-serif;
+           
+        }
+.whole-section{
+    min-height: calc(100vh - 140px);
+}
+
+        .header-section {
+            background-image: url("{% static 'images/contact.jpg' %}");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+
+            /* Inside css file do like- */
+            /* background: url("../images/contact.jpg") no-repeat center center/cover; */
+            height: 15rem;
+            position:relative;
+            top: 0;
+        }
+
+        /* Overlay effect */
+.header-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35); 
+    z-index: 1;
+}
+        .header-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color:rgb(255, 255, 255);
+            z-index:10;
+            position: absolute;
+            bottom:0;
+           left:50%;
+           transform: translateX(-50%);
+           
+            
+        }
+
+        .locations {
+    display: flex;
+    flex-direction: column;
+ 
+}
+
+
+/* Parent container default (Mobile-first) */
+.location-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Location Details (Address Section) */
+.location-info {
+    padding: 1rem;
+    border-radius: 8px;
+}
+.locations, .location-info {
+        width: 100%;
+    }
+
+    .image-container {
+        width: 100%;
+    }
+
+    .location-name, .loc-add, .location-phone-label {
+        color: #cbcfd2; 
+    }
+
+.location-address, .location-details, .location-phone{
+    color:rgb(158, 169, 174); 
+}
+/* Location Buttons */
+.location-btn {
+    display: flex;
+    justify-content: space-between; /* Aligns text left & arrow right */
+    align-items: center;
+    padding: 12px 16px;
+    font-size: 1.2rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 5px;
+    background-color:rgba(2, 62, 39, 0.28);
+    border-left: 4px solid transparent; /* Initially no border */
+    text-align: left;
+    color: #aeb9be;
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: #aeb9be;
+}
+
+.location-btn:hover {
+    opacity: 0.8;
+    color: #00a36e;
+}
+
+.location-btn:hover .arrow {
+    opacity: 0.8;
+    color: #00a36e;
+}
+
+
+.location-btn.active {
+    background: none !important; /* Remove background */
+    color: #00a36e; /* Change text color */
+    font-weight: bold;
+    border-left: 4px solid #00a36e; /* Add left border */
+}
+.location-btn.active .arrow {
+    color: #00a36e; /* Change text color */
+}
+
+
+/* Medium Screens (≥768px) */
+@media (min-width: 768px) {
+    .location-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .locations, .location-info {
+        width: 48%;
+    }
+   
+}
+
+/* Large Screens (≥1024px) */
+@media (min-width: 1024px) {
+    .location-container {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .locations, .location-info {
+        width: 22%;
+    }
+    .image-container {
+        width: 56%;
+    }
+}
+
+
+/* Image Container */
+
+.selected {
+    border: 3px solid #00a36e;
+    z-index:10;
+}
+.image-container {
+    position: relative;
+    text-align: center;
+}
+
+
+ .image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+
+        /* Arrows for main image */
+        .slide-btn {
+            position: absolute;
+            top: 43%;
+            transform: translateY(-43%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 20px;
+            border-radius: 50%;
+        }
+        
+        .left-arrow {
+            left: 10px;
+        }
+        
+        .right-arrow {
+            right: 10px;
+        }
+        
+        /* Thumbnails scrolling */
+        .frame-container {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            position: relative;
+            width: 100%; /* Take full width of parent */
+            max-width: 100%; /* Prevent overflow */
+
+            overflow: hidden;
+        }
+        
+        /* Scrollable image container */
+        .image-frame {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            white-space: nowrap;
+            scrollbar-width: none; 
+            max-width: 100%;
+        }
+        
+        .image-frame::-webkit-scrollbar {
+            display: none; 
+        }
+        
+        /* Thumbnail wrapper */
+        .thumb-container {
+            width: 178.3px;
+            height: 100px;
+            overflow: hidden;
+            border-radius: 5px;
+            flex-shrink: 0; 
+            
+        }
+        
+        /* Image Styling */
+        .thumb-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .thumb-container img:hover {
+            transform: scale(1.2);
+        }
+        
+        /* Scroll Buttons */
+        .scroll-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 5;
+        }
+        
+        .left {
+            left: 0px;
+        }
+        
+        .right {
+            right: 0px;
+        }
+        
+        
+
+    </style>
+</head>
+<body>
+
+    {% include 'nav-bar.html' %} 
+
+    <div class="whole-section">
+    <!-- Header Section with Background Image -->
+        <div class="header-section">
+            <h1 class="header-text py-6">Contact Us</h1>
+        </div>
+
+    <!-- Locations Section -->
+    <div class="container mx-auto p-6">
+        <h2 class="text-3xl font-bold mb-4">Our Locations:</h2>
+
+        <!-- Parent Layout: Dropdown | Address | Image -->
+        <div class="location-container">
+    
+    
+            <!-- Locations Dropdown -->
+            <div class="locations gap-2">
+                <button class="location-btn active" data-location="santa-clara">
+                    <span>Santa Clara. USA</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="canada">
+                    <span>Canada</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="bhubaneswar">
+                    <span>Bhubaneswar. India</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="bangalore">
+                    <span>Bangalore. India</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="ahmedabad">
+                    <span>Ahmedabad. India</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="pune">
+                    <span>Pune. India</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                <button class="location-btn" data-location="gurgaon">
+                    <span>Gurgaon. India</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+                
+                <button class="location-btn" data-location="london">
+                    <span>London. UK</span>
+                    <span class="arrow">&#11166;</span>
+                </button>
+            </div>
+        
+            <!-- Location Details -->
+            <div class="location-info">
+                <h3 class="text-2xl font-semibold location-name">Santa Clara</h3>
+                <p class="text-lg location-address">California. USA.</p>
+        <br/>
+                <h4 class="font-semibold mt-2 loc-add">Address</h4>
+                <p class="location-details">5201 Great America Parkway #320, Santa Clara, CA 95054</p>
+                <br/>
+                <h4 class="font-semibold mt-2 location-phone-label">Phone Number</h4>
+                <p class="location-phone">408 780 8001</p>
+            </div>
+        
+            <!-- Location Image -->
+<div class="image-container w-full lg:w-1/2 relative">
+    <!-- Left Arrow -->
+    <button class="slide-btn left-arrow" onclick="prevSlide()">&#10094;</button>
+
+    <!-- Main Image -->
+    <img src="{% static 'images/locations/usa/01.jpg' %}" alt="Santa Clara Location" class="location-image w-full h-48 object-cover rounded-lg">
+
+    <!-- Right Arrow -->
+    <button class="slide-btn right-arrow" onclick="nextSlide()">&#10095;</button>
+
+    <!-- Thumbnails with scrollable frame -->
+    <div class="frame-container relative">
+        <button class="scroll-btn left" onclick="scrollThumbnails(-1)">&#10094;</button>
+        <div class="image-frame"></div>
+        <button class="scroll-btn right" onclick="scrollThumbnails(1)">&#10095;</button>
+    </div>
+</div>
+
+
+        </div>
+        
+    </div>
+</div>
+
+{% include 'footer.html' %} 
+
+    <!-- jQuery for Interactive Location Selection -->
+    <script>
+$(document).ready(function () {
+    const staticPath = "{% static 'images/locations/' %}"; // Django static path
+    let currentImageIndex = 0;
+    let slideshowInterval;
+
+    const locations = {
+        "santa-clara": {
+            "name": "Santa Clara",
+            "address": "California. USA.",
+            "details": "5201 Great America Parkway #320, Santa Clara, CA 95054",
+            "phone": "408 780 8001",
+            "images": ["usa/01.jpg", "usa/02.jpg", "usa/03.jpg", "usa/04.jpg", "usa/05.jpg", "usa/06.jpg", "usa/07.jpg"]
+        },
+       "canada": {
+            "locations": [
+                {
+                    "name": "Vancouver",
+                    "address": "British Columbia, Canada",
+                    "details": "410 W Georgia St, Suite 532, Vancouver, BC V6B 1Z3"
+                },
+                {
+                    "name": "Oakville",
+                    "address": "Ontario, Canada",
+                    "details": "2030 Bristol Circle, Suite 210, Oakville, ON, Canada L6H 0H2"
+                }
+            ],
+            "phone": "",
+            "images": ["canada/01.jpg", "canada/02.jpg","canada/03.jpg","canada/04.jpg","canada/05.jpg"]
+        },
+
+
+        "bhubaneswar": {
+            "name": "Bhubaneswar",
+            "address": "Odisha. India.",
+            "details": "E/43, Infocity Ave, Sailashree Vihar, Patia, Bhubaneswar, Odisha 751024",
+            "phone": "+91 80 32213605",
+            "images": ["india_bhubaneswar/01.jpg","india_bhubaneswar/02.jpg","india_bhubaneswar/03.jpg","india_bhubaneswar/04.jpg","india_bhubaneswar/05.jpg","india_bhubaneswar/06.jpg","india_bhubaneswar/07.jpg","india_bhubaneswar/08.jpg","india_bhubaneswar/09.jpg","india_bhubaneswar/10.jpg","india_bhubaneswar/11.jpg"]
+           
+        },
+        "bangalore": {
+            "name": "Bengaluru",
+            "address": "Karnataka. India.",
+            "details": "2nd Cross, Electronics City Phase 1, Bengaluru, Karnataka 560100",
+            "phone": "+91 80 32213605",
+            "images": ["india_bangalore/01.jpg","india_bangalore/02.jpg","india_bangalore/03.jpg","india_bangalore/04.jpg"]
+         },
+        "ahmedabad": {
+            "name": "Ahmedabad",
+            "address": "Gujarat. India.",
+            "details": "Opulence Corporate House, 2nd Flr, Near Privilon Building Bopal, Ambli Road, Ahmedabad, Gujarat 380015",
+            "phone": "+91 80 32213605",
+            "images": ["india_ahmedabad/01.jpg","india_ahmedabad/02.jpg","india_ahmedabad/03.jpg","india_ahmedabad/04.jpg","india_ahmedabad/05.jpg","india_ahmedabad/06.jpg","india_ahmedabad/07.jpg","india_ahmedabad/08.jpg","india_ahmedabad/09.jpg","india_ahmedabad/10.jpg","india_ahmedabad/11.jpg"]
+        },
+        "pune": {
+            "name": "Pune",
+            "address": "Maharashtra. India.",
+            "details": "EFC Prime Office Space - Business Center, Sharayu Harmony, Near Pashan Hwy Side Rd, Baner, Pune, Maharashtra 411045",
+            "phone": "+91 80 32213605",
+            "images": ["india_pune/01.jpg","india_pune/02.jpg","india_pune/03.jpg","india_pune/04.jpg","india_pune/05.jpg","india_pune/06.jpg","india_pune/07.jpg"]
+        },
+        "gurgaon": {
+            "name": "Gurgaon",
+            "address": "Haryana. India.",
+            "details": "530, Tower B3, SPAZE ITECH PARK, Sector 49, Gurugram, Haryana 122018",
+            "phone": "+91 80 32213605",
+           "images": ["india_gurgaon/01.jpg","india_gurgaon/02.jpg","india_gurgaon/03.jpg","india_gurgaon/04.jpg"]
+        },
+        "london": {
+            "name": "London",
+            "address": "United Kingdom.",
+            "details": "College House, 2nd Floor, 17 King Edwards Road, Ruislip, London, HA4 7AE, United Kingdom",
+            "phone": "",
+           "images": []
+        }
+    };
+
+
+
+// ---------------------------------------------
+$(".location-btn").click(function () {
+    let locationKey = $(this).data("location");
+    let selectedLocation = locations[locationKey];
+
+    // Remove previous active class & set new active button
+    $(".location-btn").removeClass("active");
+    $(this).addClass("active");
+
+ // Clear previous location details
+ $(".location-info").html("");
+
+ if (selectedLocation.locations) {
+     // If location contains multiple sub-locations
+     selectedLocation.locations.forEach(loc => {
+         $(".location-info").append(`
+             <h3 class="text-2xl font-semibold">${loc.name}</h3>
+             <p class="text-lg">${loc.address}</p>
+             <br/>
+             <h4 class="font-semibold mt-2">Address</h4>
+             <p>${loc.details}</p>
+             <br/>
+         `);
+     });
+ } else {
+     // If location has a single entry
+     $(".location-info").html(`
+         <h3 class="text-2xl font-semibold">${selectedLocation.name}</h3>
+         <p class="text-lg">${selectedLocation.address}</p><br/>
+         <h4 class="font-semibold mt-2">Address</h4>
+         <p>${selectedLocation.details}</p><br/>
+         ${selectedLocation.phone ? `<h4 class="font-semibold mt-2">Phone Number</h4><p>${selectedLocation.phone}</p>` : ""}
+     `);
+ }
+
+
+    // Update images
+    let images = selectedLocation.images || [];
+    $(".image-container").toggle(images.length > 0);
+    $(".image-frame").empty();
+
+    if (images.length > 0) {
+        $(".location-image").attr("src", staticPath + images[0]); // Set first image
+        $(".image-frame").html(images.map((img, index) =>
+            `<div class="thumb-container">
+                <img src="${staticPath + img}" class="thumb ${index === 0 ? 'selected' : ''}" onclick="changeImage(this)">
+            </div>`).join(""));
+        currentImageIndex = 0;
+        startSlideshow(images);
+    }
+});
+
+function startSlideshow(images) {
+    clearInterval(slideshowInterval);
+    slideshowInterval = setInterval(() => {
+        nextSlide();
+    }, 2000);
+}
+
+window.changeImage = function (img) {
+    $(".location-image").attr("src", img.src);
+    $(".thumb").removeClass("selected"); // Remove all selected states
+    $(img).addClass("selected"); // Apply selected border immediately
+};
+
+window.nextSlide = function () {
+    let images = $(".thumb");
+    currentImageIndex = (currentImageIndex + 1) % images.length;
+    changeImage(images[currentImageIndex]);
+};
+
+window.prevSlide = function () {
+    let images = $(".thumb");
+    currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+    changeImage(images[currentImageIndex]);
+};
+
+window.scrollThumbnails = function (direction) {
+    let frame = document.querySelector(".image-frame");
+    let thumbWidth = document.querySelector(".thumb-container").offsetWidth;
+    frame.scrollBy({ left: direction * (thumbWidth + 10), behavior: "smooth" });
+};
+
+// Set initial location to Santa Clara
+$(".location-btn[data-location='santa-clara']").trigger("click");
+});
+
+    </script>
+
+
+</body>
+</html>

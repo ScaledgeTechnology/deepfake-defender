@@ -1,0 +1,167 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Navbar Styling */
+        nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 999;
+            background: linear-gradient(to right, #1e292f, #031315, #1e292f);
+            padding-left: 10px; /* Added margin to the left */
+            padding-right: 10px; /* Added margin to the right */
+        }
+
+        .nav-link {
+            color: #cbcfd2;
+            font-weight: 500;
+            position: relative;
+            
+            transition: color 0.3s ease;
+        }
+
+        /* Underline effect: Smooth line transition from left to right */
+        @media (min-width: 768px) {
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 0%;
+                height: 4px;
+                border-radius:5px;
+                background-color: #00a36e;
+                box-shadow: 0 0 15px rgba(0, 220, 150, 0.75), 0 0 30px rgba(0, 100, 70, 0.73);
+                transition: width 0.3s ease-in-out;
+            }
+
+            .nav-link:hover::after {
+                width: 100%;
+            }
+        }
+
+        /* Current page (Home) active link color */
+        .nav-link.active {
+            color: #00a36e;
+            font-weight: bold;
+        }
+        .nav-link:hover {
+            color: #00a36e;
+        }
+
+        /* Navbar links for the user menu */
+        .drop_menu {
+            color: #cbcfd2; 
+            transform: translateX(-70%);
+            top: 0;
+            background: #253035; 
+            transition: all 0.3s ease-in-out;
+        }
+        .text-gray{
+            color: #cbcfd2;
+        }
+
+        #user-dropdown a:hover {
+            color: #cbcfd2; 
+            background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+            border-radius: 5px;
+        }
+
+        /* For Mini Screens (Mobile) */
+        @media (max-width: 767px) {
+            .nav-link:hover {
+                color: #cbcfd2; 
+                background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+                border-radius: 5px;
+            }
+        }
+
+        /* Profile icon alignment */
+        .profile-icon {
+            margin-left: auto; /* This pushes the profile icon to the right */
+        }
+
+    </style>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <nav>
+        <div class="max-w-screen-xl flex flex-wrap items-center justify-between m-auto p-4">
+            <a href="{% url 'index' %}" class="flex flex-col items-start space-y-1 rtl:space-y-reverse">
+                <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                    <img src="{% static 'images/logo_deepfake.png' %}" class="h-7" alt="Deepfake Logo" />
+                    <span class="self-center text-2xl font-semibold whitespace-nowrap text-white">Deepfake AI</span>
+                </div>
+                <span class="text-sm text-gray">A product by Scaledge</span>
+            </a>
+
+            <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+                <button type="button" class="flex text-sm rounded-full md:me-0 profile-icon" id="user-menu-button" aria-expanded="false">
+                    <span class="sr-only">Open user menu</span>
+                    <img class="w-8 h-8 rounded-full" src="{% static 'images/profile_logo.png' %}" alt="user photo">
+                </button>
+
+                <!-- Dropdown menu (outside navbar) -->
+                <div class="drop_menu z-50 hidden absolute right-0 my-2 text-base list-none divide-y rounded-lg shadow" id="user-dropdown">
+                    <div class="px-4 py-3">
+                        <span class="block text-sm text-white">Biku</span>
+                        <span class="block text-sm truncate text-mail">biku@scaledge.io</span>
+                    </div>
+                    <ul class="py-2" aria-labelledby="user-menu-button">
+                        <li>
+                            <a href="#" class="block px-4 py-2 text-sm nav-link2">Dashboard</a>
+                        </li>
+                        <li>
+                            <a href="#" class="block px-4 py-2 text-sm nav-link2">Settings</a>
+                        </li>
+                        <li>
+                            <a href="#" class="block px-4 py-2 text-sm nav-link2">Sign out</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <button data-collapse-toggle="navbar-user" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-400 rounded-lg md:hidden hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600" 
+                aria-controls="navbar-user" aria-expanded="false" id="main-menu-button">
+                    <span class="sr-only">Open main menu</span>
+                    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-1" id="navbar-user">
+                <ul class="flex flex-col font-medium p-4 md:p-0 mt-4 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0">
+                    <li>
+                        <a href="{% url 'index' %}" class="block py-2 px-3 nav-link {% if request.path == '/' %} active {% endif %}" aria-current="page">Home</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'about' %}" class="block py-2 px-3 nav-link {% if request.path == '/about/' %} active {% endif %}">About</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'service' %}" class="block py-2 px-3 nav-link {% if request.path == '/service/' %} active {% endif %}">Services</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'pricing' %}" class="block py-2 px-3 nav-link {% if request.path == '/pricing/' %} active {% endif %}">Pricing</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'contact' %}" class="block py-2 px-3 nav-link {% if request.path == '/contact/' %} active {% endif %}">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <script src="{% static 'js/script.js' %}"></script>
+
+</body>
+</html>

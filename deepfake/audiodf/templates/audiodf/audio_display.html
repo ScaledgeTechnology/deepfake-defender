@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Analysis Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Background styling */
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background: radial-gradient(
+                circle at 30% 70%, 
+                #000513 0%,       
+                #010A12 15%,      
+                #010E14 30%,      
+                #001A0D 50%,      
+                #030815 70%,      
+                #050A18 85%,      
+                #000000 100%      
+            );
+        }
+
+        /* Container styles */
+        .main-container {
+            padding: 2rem 5rem;
+            min-height: calc(100vh - 140px); 
+        }
+
+        /* Heading styles */
+        .main-heading {
+            color: #00a36e;
+            text-shadow: 2px 2px 5px rgba(0, 163, 109, 0.5);
+            text-align: center;
+        }
+
+        .sub-heading {
+            color: #00a36e;
+            text-align: center;
+        }
+
+        /* Blur box styles */
+        .blur-box {
+            background: radial-gradient(circle, rgba(0, 163, 109, 0.32), rgba(17, 67, 50, 0.42));
+            border: 2px solid #00a36e;
+            color: #aeb9be;
+            box-shadow: 0 4px 10px rgba(0, 163, 109, 0.2);
+            border-radius: 10px;
+        }
+
+
+        .confidence-image {
+            width: 100px; 
+            height: auto;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .graph-img {
+            width: 75%;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 163, 109, 0.2);
+        }
+
+        @media (max-width: 600px) {
+            .main-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'nav-bar.html' %} 
+
+<div class="main-container">
+    <!-- Main Heading -->
+    <h1 class="main-heading text-center text-4xl font-bold my-6">Audio Analysis Results</h1>
+
+    <!-- Audio Section -->
+    <div class="flex justify-center mb-6">
+        <audio id="audioPlayer" controls preload="auto" class="w-full lg:w-2/4 rounded-lg shadow-lg">
+            <source src="{{ audio_file }}" type="audio/{{ audio_file|slice:'-3:'|lower }}">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <!-- Confidence Section -->
+    <h2 class="sub-heading text-2xl text-center font-semibold my-4">Confidence Scores</h2>
+    <div class="flex flex-col sm:flex-row justify-around my-6 space-y-6 sm:space-y-0 sm:space-x-6">
+        <!-- Real Confidence -->
+        <div class="blur-box p-4 w-full sm:w-1/2 text-center">
+            <div class="flex flex-col items-center">
+            <img src="{% static 'images/thumpup.png' %}" alt="Thumb Up" class="confidence-image">
+            <p class="text-lg font-medium">Real Confidence</p>
+            </div>
+            <p class="text-2xl font-semibold">{{ real_confidence }}%</p>
+        </div>
+
+        <!-- Fake Confidence -->
+        <div class="blur-box p-4 w-full sm:w-1/2 text-center">
+            <div class="flex flex-col items-center">
+            <img src="{% static 'images/thumpdown.png' %}" alt="Thumb Down" class="confidence-image">
+            <p class="text-lg font-medium">Fake Confidence</p>
+            </div>
+            <p class="text-2xl font-semibold">{{ fake_confidence }}%</p>
+        </div>
+    </div>
+
+    <!-- Graph Section -->
+    {% if graph_path %}
+    <h2 class="sub-heading text-center text-2xl font-semibold my-4">Audio Prediction Graph</h2>
+    <div class="flex justify-center">
+        <img src="{{ graph_path }}" alt="Audio Analysis Graph" class="graph-img">
+    </div>
+    {% endif %}
+
+</div>
+
+{% include 'footer.html' %} 
+</body>
+</html>

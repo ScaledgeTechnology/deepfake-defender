@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unauthorized Access</title>
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Gilda+Display);
+
+        html {
+            background: radial-gradient(rgb(3, 60, 41),rgb(1, 28, 19),  #000000);
+            {% comment %} background: radial-gradient( #00a36e, #000000); {% endcomment %}
+            color: white;
+            overflow: hidden;
+            height: 100%;
+            user-select: none;
+            color: #cbcfd2; 
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .error,
+        .info,
+        .timer {
+            font-family: 'Gilda Display', serif;
+            font-style: italic;
+            text-align: center;
+            position: relative;
+            opacity: 0.05;
+            animation: noise 2s linear infinite;
+        }
+
+        .error {
+            font-size: 60px;
+        }
+
+        .error:after {
+            content: '500';
+            font-size: 90px;
+            opacity: 0;
+            color: #00a36e;
+            animation: noise-1 .4s linear infinite;
+        }
+
+        .info {
+            font-size: 30px;
+            animation: noise-3 2s linear infinite;
+        }
+
+        .index-go-btn {
+            background: radial-gradient( #00a36e, #000000);
+            background-color: #00a36e;
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 20px 40px;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+            position: relative;
+            opacity: 0.05;
+            animation: noise-4 1s linear infinite;
+        }
+
+
+        .timer {
+            font-size: 200px;
+            position: relative;
+            opacity: 0.5;
+            animation: noise-5 1s linear infinite;
+        }
+
+        @keyframes noise-1 {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            70%,
+            90% {
+                opacity: 0;
+            }
+
+            10% {
+                opacity: .1;
+            }
+
+            50% {
+                opacity: .5;
+                left: -6px;
+            }
+
+            80% {
+                opacity: .3;
+            }
+
+            100% {
+                opacity: .6;
+                left: 2px;
+            }
+        }
+
+        @keyframes noise-3 {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            70%,
+            90% {
+                opacity: 0;
+            }
+
+            10% {
+                opacity: .1;
+            }
+
+            50% {
+                opacity: .5;
+                left: 6px;
+            }
+
+            80% {
+                opacity: .3;
+            }
+
+            100% {
+                opacity: .6;
+                left: -2px;
+            }
+        }
+
+        @keyframes noise {
+
+            0%,
+            3%,
+            5%,
+            42%,
+            44%,
+            100% {
+                opacity: 1;
+                transform: scaleY(1);
+            }
+
+            4.3% {
+                opacity: 1;
+                transform: scaleY(1.7);
+            }
+
+            43% {
+                opacity: 1;
+                transform: scaleX(1.5);
+            }
+        }
+
+        @keyframes noise-4 {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            70%,
+            90% {
+                opacity: 0;
+            }
+
+            10% {
+                opacity: .1;
+            }
+
+            50% {
+                opacity: .5;
+                left: 2px;
+            }
+
+            80% {
+                opacity: .3;
+            }
+
+            100% {
+                opacity: .6;
+                left: -2px;
+            }
+        }
+
+        @keyframes noise-5 {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            70%,
+            90% {
+                opacity: 0.5;
+            }
+
+            10% {
+                opacity: .3;
+            }
+
+            50% {
+                opacity: .7;
+            }
+
+            80% {
+                opacity: .4;
+            }
+
+            100% {
+                opacity: .6;
+            }
+        }
+
+        /* Responsive Styling */
+        @media (max-width: 1028px) {
+            .error {
+                font-size: 40px;
+            }
+            .error:after {
+                font-size: 60px;
+            }
+            .info {
+                font-size: 20px;
+            }
+            .timer {
+                font-size: 100px;
+            }
+            .index-go-btn {
+                font-size: 18px;
+                padding: 15px 30px;
+            }
+        }
+    </style>
+</head> 
+
+<body>
+    <div class="container">
+        <div class="error">ERROR 500 - SYSTEM FAILURE</div>
+        <div class="info">Something went terribly wrong... we can't process the prediction</div>
+        <div class="timer" id="timer">5</div>
+        <a class="index-go-btn" id="back-btn" href="#">Try Again</a>
+    </div>
+
+    <script>
+        // Set button to go one level back
+        document.addEventListener("DOMContentLoaded", function () {
+            var backBtn = document.getElementById("back-btn");
+            var previousUrl = document.referrer || window.location.pathname.split('/').slice(0, -2).join('/') + '/';
+            backBtn.setAttribute("href", previousUrl);
+        });
+
+        // Timer-based automatic redirection
+        var timeleft = 5;
+        var timer = setInterval(function () {
+            document.getElementById("timer").innerHTML = timeleft;
+            timeleft -= 1;
+            if (timeleft < 0) {
+                clearInterval(timer);
+                window.location.href = document.referrer || window.location.pathname.split('/').slice(0, -2).join('/') + '/';
+            }
+        }, 1000);
+    </script>
+</body>
+
+
+</html>

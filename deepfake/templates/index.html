@@ -1,0 +1,400 @@
+{% load static %}
+{% comment %} {% load static tailwind_tags %} {% endcomment %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Defender: Home</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- <link rel="stylesheet" href="{% static 'css/styles.css'%}"> -->
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+    {% comment %} {% tailwind_css %} {% endcomment %}
+
+<style>
+    body{
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(
+            circle at 30% 70%, 
+            #000513 0%,
+            #011709 15%,       
+             /*  #010A12 15%,       */
+            #010E14 30%,       
+            #001A0D 50%,      
+            #030815 70%,      
+            #050A18 85%,      
+            #000000 100%      
+        );
+        color: #cbcfd2; 
+        font-family: Arial, sans-serif;
+        min-height: 100vh;
+    }
+
+    
+    /* Video section */
+    .video-section {
+        position: relative;
+        width: 100%;
+        min-height: calc(100vh - 88px);
+        overflow: hidden;
+    }
+    
+    /* Video fills the section */
+    .video-section video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 100%;
+        min-height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+    
+    /* Overlay for better text readability */
+    .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(#00000000,#000000ae,#000000be);
+        z-index: 0;
+    }
+    
+    /* Default: Text over video for large screens */
+    .overlay-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+        width: 80%;
+        max-width: 800px;
+    }
+    .top_para{
+        color:rgb(200, 255, 238);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1024px) { /* Below lg (md, sm, xs) */
+        .video-section {
+            display: flex;
+            flex-direction: column;
+            min-height: 60vh;
+        
+        }
+    
+        .video-section video {
+            position: relative;
+            top: 20%;
+            left: 0%;
+            transform: translate(-0%, -0%);
+            width: 100%;
+        }
+    
+        .video-overlay {
+            display: none; /* Removes overlay on small screens */
+        }
+
+        .overlay-content {
+         position: relative;
+        width: 80%;
+        max-width: 800px;
+        text-align: center;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%); /* Keeps it centered */
+        margin-top: 20px; /* Adds spacing between video and text */
+    }
+    }
+
+
+
+
+    #exploreBtn {
+        cursor: pointer;
+        margin-bottom: 3rem;
+        background: linear-gradient(135deg, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+        color: #cbcfd2;
+        border: 2px solid #00a36e;
+        letter-spacing: 1px;
+        font-weight: 700;
+        transform: scale(1.03);
+        transition: transform 0.3s ease-in-out;
+        position: relative;
+        overflow: hidden;
+    }
+    #exploreBtn:hover {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(0, 220, 150, 0.46), 0 0 30px rgba(0, 100, 70, 0.45);
+    }
+    #exploreBtn svg, #exploreBtn span {
+        position: relative;
+        z-index: 1;
+    }
+    #exploreBtn:hover svg {
+        position: relative;
+        animation: shake-icon 0.5s ease-in-out;
+    }  
+    @keyframes shake-icon {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        50% { transform: translateX(5px); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+    }
+    
+
+    
+
+    .box {
+        height: 250px; /* Fixed height for each box */
+    }
+
+
+    .sec-btn {
+        background: transparent;
+        color: #00a36e;
+        border: 2px solid #00a36e;
+        padding: 8px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        transform: scale(1.03);
+        transition: background 0.3s ease, color 0.3s ease,transform 0.3s ease-in-out;
+    }
+    
+    .sec-btn:hover {
+        background: radial-gradient(circle, rgba(0, 163, 109, 0.69), rgba(17, 67, 50, 0.66));
+        color: #cbcfd2;
+        transform: scale(1);
+        }
+    
+    .sec-btn:focus {
+        outline: none;
+        box-shadow: 0 0 15px rgba(0, 220, 150, 0.46), 0 0 30px rgba(0, 100, 70, 0.45);
+    }
+    
+    
+    
+    
+    
+
+    
+
+    .img_container {
+        box-shadow: rgba(255, 255, 255, 0.1) 0px 50px 100px -20px, 
+        rgba(255, 255, 255, 0.2) 0px 30px 60px -30px, 
+        rgba(200, 200, 255, 0.15) 0px -2px 6px 0px inset;
+
+        border-radius: 10px;
+        animation: aiFloating 6s ease-in-out infinite;
+        overflow: hidden;
+        
+    }
+    
+    /* Simple Floating Animation */
+    @keyframes aiFloating {
+        0% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-15px);
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
+    
+    
+.img_container img{
+    padding:0.3rem;
+    border-radius: 15px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease-in-out;
+}
+
+
+/* Hover effect: Zoom the image slightly */
+.img_container:hover img {
+    transform: scale(1.1);
+}
+
+
+
+.img_container img.first-img{
+    object-position: 50% 42%;
+}
+
+.img_container img.third-img{
+    object-position: 50% 36%;
+}
+
+.animate-aiBoxAnimation {
+    animation: fadeInSlideUp 3s ease-in-out forwards;
+  }
+.animate-fade-in-slide-up {
+    animation: fadeInSlideUp 3s ease-in-out forwards;
+  }
+  
+  /* Add animation for para_div */
+  .animate-text-glow {
+    animation: textGlow 2s ease-out forwards;
+  }
+.para_div{
+        color: #aeb9be;
+        font-weight: 600;
+      }
+@keyframes textGlow {
+        0% {
+          color: rgba(255, 255, 255, 0);
+          transform: translateY(-20px);
+        }
+        100% {
+          color: #aeb9be;
+          transform: translateY(0);
+        }
+      }
+
+.div_head {
+    font-weight: 700; 
+    color: #00a36e; 
+    text-shadow: 1px 1px 2px rgba(37, 104, 82, 0.84); /* Subtle shadow for depth */
+}
+
+
+
+@keyframes fadeInSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+</style>
+
+</head>
+<body>
+     {% include 'nav-bar.html' %} 
+    
+     <section class="video-section relative flex flex-col lg:block">
+        <div class="video-overlay"></div>
+    
+        <!-- Video -->
+        <video autoplay muted loop class="w-full lg:absolute lg:top-0 lg:left-0 lg:h-full lg:object-cover">
+            <source src="{% static 'videos/face_home.mp4' %}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    
+        <!-- Overlay content -->
+        <div class="overlay-content lg:absolute lg:top-1/2 lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:-translate-y-1/2 
+                    w-full max-w-3xl text-center">
+            
+            <h1 class="top_title mb-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
+                Deepfake Defender
+            </h1>
+            <p class="top_para mb-6 text-lg font-normal lg:text-xl">
+                Know What’s Real: Protect Yourself from the Threat of Deepfakes.
+            </p>
+            <a href="#" id="exploreBtn" 
+               class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                <span>Explore</span>
+                <svg class="w-4 h-4 ml-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+                </svg>
+            </a>
+        </div>
+    </section>
+    
+    
+
+
+ <!-- Second Section (Alternating Boxes) -->
+ <section id="secondSection" class="min-h-screen flex flex-col justify-center space-y-16 p-10">
+
+    <!-- Box 1 (Image on Left, Text on Right) -->
+    <div class="flex flex-col sm:flex-row items-center justify-between scroll-animate">
+        <!-- Image Box -->
+        <div class="w-full sm:w-1/2 box overflow-hidden img_container">
+            <img src="{% static 'images/video_face.jpg' %}" alt="Image 1" class="w-full h-full object-cover first-img">
+            
+
+        </div>
+        <!-- Text and Button -->
+        <div class="flex flex-col items-start justify-center mt-6 sm:mt-0 sm:ml-10 sm:w-1/2">
+            <h3 class="text-2xl mb-2 div_head">Video Deepfake Defender</h3>
+            <p class="mb-4 para_div">Is that video real or AI-generated? Uncover the truth with our powerful deepfake detection—because seeing isn't always believing.</p>
+            <a href="{% url 'video_upload' %}">
+                <button class="sec-btn">
+                    Start
+                </button>
+            </a>
+        </div>
+    </div>
+    
+
+    <!-- Box 2 (Image on Right, Text on Left) -->
+    <div class="flex flex-col sm:flex-row-reverse items-center justify-between scroll-animate">
+        <!-- Image Box -->
+        <div class="w-full sm:w-1/2 box overflow-hidden img_container">
+            <img src="{% static 'images/image_face.jpg' %}" alt="Image 2" class="w-full h-full object-cover second-img"> <!-- Updated shadow class -->
+            {% comment %} <img src="{% static 'images/image_face.webp' %}" alt="Image 2" class="w-full h-full object-cover"> <!-- Updated shadow class --> {% endcomment %}
+        </div>
+
+        <!-- Text and Button -->
+        <div class="flex flex-col sm:items-end justify-center mt-6 sm:mt-0 sm:mr-10 sm:w-1/2">
+            <h3 class="text-2xl mb-2 div_head">Image Deepfake Defender</h3>
+            <p class="mb-4 para_div">Think that image looks suspicious? Let our AI reveal hidden manipulations and expose deepfake edits in seconds.</p>
+            <a href="{% url 'image_upload' %}">
+            <button class="sec-btn">
+                Start
+            </button>
+        </a>
+        </div>
+    </div>
+
+    <!-- Box 3 (Image on Left, Text on Right) -->
+    <div class="flex flex-col sm:flex-row items-center justify-between scroll-animate">
+        <!-- Image Box -->
+        <div class="w-full sm:w-1/2 box overflow-hidden img_container">
+            <img src="{% static 'images/audio_face.jpg' %}" alt="Image 3" class="w-full h-full object-cover third-img"> <!-- Updated shadow class -->
+            {% comment %} <img src="{% static 'images/audio_wave.jpg' %}" alt="Image 3" class="w-full h-full object-cover"> <!-- Updated shadow class --> {% endcomment %}
+        </div>
+
+        <!-- Text and Button -->
+        <div class="flex flex-col items-start justify-center mt-6 sm:mt-0 sm:ml-10 sm:w-1/2">
+            <h3 class="text-2xl mb-2 div_head">Audio Deepfake Defender</h3>
+            <p class="mb-4 para_div">Not sure if that voice is real? Detect AI-cloned speech and protect yourself from audio deception effortlessly.</p>
+            <a href="{% url 'audio_upload' %}">
+            <button class="sec-btn">
+                Start
+            </button>
+        </a>
+        </div>
+    </div>
+
+</section>
+
+     {% include 'footer.html' %} 
+
+{% comment %}     <script src="{% static 'js/script.js' %}"></script> {% endcomment %}
+
+</body>
+</html>
