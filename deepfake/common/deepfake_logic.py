@@ -44,7 +44,7 @@ from moviepy.editor import VideoFileClip
 from typing import Optional, Union, Dict
 from scipy.interpolate import make_interp_spline
 from matplotlib.collections import LineCollection
-
+from huggingface_hub import hf_hub_download
 
 
 #  Django imports
@@ -53,8 +53,15 @@ from django.conf import settings
 
 # -------------------- All Paths --------------------
 # Models path
-video_model_location = os.path.join(settings.BASE_DIR, 'models/resnetinceptionv1_epoch_32.pth')
-audio_model_location = os.path.join(settings.BASE_DIR, 'models/audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth')
+# Hugging Face repo details
+HF_REPO = "Scaledge/DeepFakeDetectorModels"
+
+# Download model files from Hugging Face
+video_model_location = hf_hub_download(repo_id=HF_REPO, filename="resnetinceptionv1_epoch_32.pth")
+audio_model_location = hf_hub_download(repo_id=HF_REPO, filename="audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth")
+
+# video_model_location = os.path.join(settings.BASE_DIR, 'models/resnetinceptionv1_epoch_32.pth')
+# audio_model_location = os.path.join(settings.BASE_DIR, 'models/audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth')
 
 # saving paths
 audio_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/audio.wav')
