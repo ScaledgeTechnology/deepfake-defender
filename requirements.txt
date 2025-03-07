@@ -24,5 +24,8 @@ scipy>=1.8.0
 soundfile>=0.10.3.post1
 typing-extensions>=4.0.0
 
+# To download models
+huggingface_hub
+
 # If librosa warning shows install manually-
 # pip install librosa
