@@ -6,19 +6,46 @@ import re
 import webbrowser
 import requests
 
-def check_python_version():
-    """Checks if the installed Python version is between 3.11 and 3.12.6."""
-    required_min_version = (3, 11, 0)
-    required_max_version = (3, 12, 6)
+def get_python_versions():
+    """Find all installed Python versions from system paths and return as a sorted list (highest first)."""
+    paths = os.getenv("PATH", "").split(os.pathsep)
+    seen_paths = set()
+    python_executables = []
+
+    # Search for all possible Python executables in system paths
+    for path in paths:
+        if os.path.isdir(path) and path not in seen_paths:
+            seen_paths.add(path)  # Avoid duplicates
+            for file in os.listdir(path):
+                if re.fullmatch(r"python(\d+(\.\d+)*)?\.exe", file, re.IGNORECASE):  # Match python.exe, python3.exe, python3.11.exe
+                    full_path = os.path.join(path, file)
+                    python_executables.append(full_path)
+
+    versions = []
+    for exe in python_executables:
+        try:
+            output = subprocess.run([exe, "--version"], capture_output=True, text=True).stdout.strip()
+            match = re.search(r"Python (\d+\.\d+\.\d+)", output)
+            if match:
+                version_tuple = tuple(map(int, match.group(1).split(".")))  # Convert "3.11.2" -> (3, 11, 2)
+                versions.append((exe, version_tuple))  # Store (path, version)
+        except (FileNotFoundError, PermissionError):
+            continue  # Skip invalid or inaccessible executables
+
+    # Sort versions in descending order (highest version first)
+    versions.sort(key=lambda x: x[1], reverse=True)
+
+    return versions  # Returns list of tuples (python_path, version_tuple)
+
+def find_compatible_python():
+    """Find a Python version within the range 3.11 ≤ version ≤ 3.12.6"""
+    versions = get_python_versions()
     
-    current_version = sys.version_info[:3]
-    print(f"🐍 Detected Python version: {'.'.join(map(str, current_version))}")
-    
-    if not (required_min_version <= current_version <= required_max_version):
-        print("❌ Unsupported Python version! Please install Python between 3.11 and 3.12.6.")
-        sys.exit(1)
-    
-    print("✅ Python version is compatible.")
+    for exe, v in versions:
+        if (3, 11, 0) <= v <= (3, 12, 6):  # Check range
+            return exe  # Return the path to the correct Python executable
+
+    return None  # No valid version found
 
 def run_command(command):
     """Runs a shell command and prints output in real-time."""
@@ -77,7 +104,15 @@ def run_command_in_venv(command, venv_path):
         sys.exit(1)
 
 def main():
-    check_python_version()
+    python_exec = find_compatible_python()
+    
+    if not python_exec:
+        print("❌ No compatible Python version found (must be between 3.11 and 3.12.6).")
+        print("🔗 Please install a supported version: https://www.python.org/downloads/")
+        sys.exit(1)
+    
+    print(f"✅ Found compatible Python version: {python_exec}")
+
     # Get current directory
     current_dir = os.getcwd()
     print("📁 Current Directory:", current_dir)
@@ -94,7 +129,7 @@ def main():
     # Step 2: Create Virtual Environment if not exists
     if not os.path.exists(venv_path):
         print("🐍 Creating virtual environment...")
-        run_command(f"python -m venv {venv_path}")
+        run_command(f"{python_exec} -m venv {venv_path}")
     else:
         print("✅ Virtual environment already exists.")
 
