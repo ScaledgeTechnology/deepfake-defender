@@ -18,14 +18,15 @@ def get_python_versions():
             seen_paths.add(path)  # Avoid duplicates
             for file in os.listdir(path):
                 if re.fullmatch(r"python(\d+(\.\d+)*)?\.exe", file, re.IGNORECASE):  # Match python.exe, python3.exe, python3.11.exe
-                    full_path = os.path.join(path, file)
+                    full_path = os.path.realpath(os.path.join(path, file))
                     python_executables.append(full_path)
 
     versions = []
     for exe in python_executables:
         try:
-            output = subprocess.run([exe, "--version"], capture_output=True, text=True).stdout.strip()
-            match = re.search(r"Python (\d+\.\d+\.\d+)", output)
+            output = subprocess.run([exe, "--version"], capture_output=True, text=True)
+            version_output = output.stdout.strip() or output.stderr.strip()
+            match = re.search(r"Python (\d+\.\d+\.\d+)", version_output)
             if match:
                 version_tuple = tuple(map(int, match.group(1).split(".")))  # Convert "3.11.2" -> (3, 11, 2)
                 versions.append((exe, version_tuple))  # Store (path, version)
