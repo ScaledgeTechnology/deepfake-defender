@@ -6,6 +6,20 @@ import re
 import webbrowser
 import requests
 
+def check_python_version():
+    """Checks if the installed Python version is between 3.11 and 3.12.6."""
+    required_min_version = (3, 11, 0)
+    required_max_version = (3, 12, 6)
+    
+    current_version = sys.version_info[:3]
+    print(f"🐍 Detected Python version: {'.'.join(map(str, current_version))}")
+    
+    if not (required_min_version <= current_version <= required_max_version):
+        print("❌ Unsupported Python version! Please install Python between 3.11 and 3.12.6.")
+        sys.exit(1)
+    
+    print("✅ Python version is compatible.")
+
 def run_command(command):
     """Runs a shell command and prints output in real-time."""
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -63,6 +77,7 @@ def run_command_in_venv(command, venv_path):
         sys.exit(1)
 
 def main():
+    check_python_version()
     # Get current directory
     current_dir = os.getcwd()
     print("📁 Current Directory:", current_dir)
