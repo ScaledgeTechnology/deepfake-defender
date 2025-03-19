@@ -3,3 +3,12 @@
 
 # Ignore compiled Python files
 # *.pyc
+
+# Ignore the virtual environment
+.venv/
+
+# Ignore build artifacts
+build/
+
+# Ignore PyInstaller spec file
+django_app.spec
