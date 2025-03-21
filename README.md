@@ -141,7 +141,8 @@ Once the development server is running, a link will be displayed in the terminal
 ---
 
 ### **Additional Notes**
-- Ensure your virtual environment is always activated when working on the project (`(.venv)` will appear in your terminal).  
+- Your system should have any Python version between 3.10 and 3.12.6 installed (Not above to that) 
+- If you are doing manual setup, ensure your virtual environment is always activated when working on the project (`(.venv)` will appear in your terminal).  
 - Follow all steps carefully to avoid configuration issues.
 
 
