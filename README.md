@@ -46,16 +46,25 @@ Follow these steps to set up and run the project on your local machine.
    git clone https://github.com/ScaledgeTechnology/deepfake-defender.git
    ```
    You have successfully cloned the project repository.
+---
 
-4. Navigate into the root folder:
-   ```bash
-   cd deepfake-defender
-   ```
+
+### **2. Set Up the Django Project**
+- `Note:` Your system should have **any Python version between 3.10 and 3.12.6** installed.
+If your Python version is not in this range, please install it first from the official [Python website](https://www.python.org/downloads/).  
+
+- You can set up the project using **either** of the following methods:
+---
+
+### **I. Direct Setup Using the .exe File**
+- Navigate to the **deepfake-defender** folder that you have cloned on your system.  
+- Inside this folder, you will find a file named **django_app.exe**.  
+- **Double-click** on `django_app.exe` — this will automatically handle the entire setup process.  
+- After a short while, you will be redirected to the project's webpage.
 
 ---
 
-### **2. Set Up the Django Project**
-
+### **II. Manual Setup Using the Terminal**
 #### **Step 1: Make sure you are inside the root folder**
 If not, open the terminal and navigate to the deepfake-defender folder:  
 ```bash
