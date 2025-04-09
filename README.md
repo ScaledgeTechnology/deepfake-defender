@@ -5,19 +5,19 @@
 ---
 ### **Demo Video**
 
-<a href="https://youtu.be/d5mOhsKQorM">
+<a href="https://youtu.be/GdRy9i-CTIs">
     <img src="https://github.com/ScaledgeTechnology/deepfake-defender/blob/main/demo_gif_deepfake.gif" alt="Deepfake Defender Demo" />
 </a>
 
-*Watch the full video on [YouTube](https://youtu.be/d5mOhsKQorM)* 
+*Watch the full video on [YouTube](https://youtu.be/GdRy9i-CTIs)* 
 <a href="https://youtu.be/d5mOhsKQorM">
     <img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube Logo" width="17" style="vertical-align: middle;" />
 </a>
 
 or
 
-*Watch the full video on [Google Drive](https://drive.google.com/file/d/1PtNili2XQftArzNvCV1ZNlb5GTTSsRaI/view?usp=sharing)* 
-<a href="https://drive.google.com/file/d/1PtNili2XQftArzNvCV1ZNlb5GTTSsRaI/view?usp=sharing">
+*Watch the full video on [Google Drive](https://drive.google.com/file/d/1Yjv2wLtByC9ciEq_EFmiNbuLAWI1FCFW/view?usp=sharing)* 
+<a href="https://drive.google.com/file/d/1Yjv2wLtByC9ciEq_EFmiNbuLAWI1FCFW/view?usp=sharing">
     <img src="https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" alt="Google Drive Logo" width="17" style="vertical-align: middle;" />
 </a>
 
