@@ -114,9 +114,13 @@
     {% if graph_path %}
     <h2 class="sub-heading text-center text-2xl font-semibold my-4">Audio Prediction Graph</h2>
     <div class="flex justify-center">
-        <img src="{{ graph_path }}" alt="Audio Analysis Graph" class="graph-img">
+        <img src="{{ graph_path }}" alt="Audio Analysis Graph" class="w-3/4 rounded-lg shadow-lg">
     </div>
-    {% endif %}
+{% else %}
+    <p class="text-center text-red-400 font-semibold mt-4">
+        Graph not generated due to insufficient audio segments.
+    </p>
+{% endif %}
 
 </div>
 

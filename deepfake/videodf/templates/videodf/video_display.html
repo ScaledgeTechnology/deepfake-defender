@@ -252,7 +252,7 @@
                         <img src="{{ img }}" alt="Fake Frame" class="scroll-image">
                     {% endfor %}
                 {% else %}
-                    <p class="text-center text-gray-500">No fake frames available</p>
+                    <p class="text-center text-gray-500">No fake frames available for Grad-CAM Visualization</p>
                 {% endif %}
             </div>
         </div>
@@ -286,12 +286,17 @@
     {% endif %}
 
     <!-- Graph Section -->
-    {% if real_audio_confidence and fake_audio_confidence and real_audio_confidence != "N/A" and fake_audio_confidence != "N/A" %}
-    <h2 class="sub-heading text-center text-2xl font-semibold my-4">Audio Prediction Graph</h2>
-    <div class="flex justify-center">
-        <img src="{{ graph_path }}" alt="Audio Analysis Graph" class="w-3/4 rounded-lg shadow-lg">
-    </div>
-    {% endif %}
+    {% if graph_path %}
+<h2 class="sub-heading text-center text-2xl font-semibold my-4">Audio Prediction Graph</h2>
+<div class="flex justify-center">
+    <img src="{{ graph_path }}" alt="Audio Analysis Graph" class="w-3/4 rounded-lg shadow-lg">
+</div>
+{% else %}
+<p class="text-center text-red-400 font-semibold mt-4">
+    Graph not generated due to insufficient audio segments.
+</p>
+{% endif %}
+
 </div>
 
 

@@ -871,7 +871,8 @@ def visualize_audio_predictions_waveform(predictions, save_graph_path, sample_ra
 
     if num_segments < 2:
         print("Not enough data points for spline interpolation. Skipping graph generation.")
-        return
+        return False  # <<<< RETURN FLAG
+
 
     real_confidences = [pred[0] * 100 for pred in predictions]
     fake_confidences = [pred[1] * 100 for pred in predictions]
@@ -932,6 +933,7 @@ def visualize_audio_predictions_waveform(predictions, save_graph_path, sample_ra
     os.makedirs(os.path.dirname(save_graph_path), exist_ok=True)
     plt.savefig(save_graph_path, format='png', dpi=300, bbox_inches='tight')
     print(f"Graph saved to: {save_graph_path}")
+    return True  # <<<< SUCCESS
 
 
 # -------------------- Predictors --------------------
@@ -988,11 +990,14 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     predictions = np.array(predictions)
     # print(predictions)
 
-    visualize_audio_predictions_waveform(predictions, graph_path, duration=duration, stride_seconds=stride_seconds)
+    graph_generated = visualize_audio_predictions_waveform(predictions, graph_path, duration=duration, stride_seconds=stride_seconds)
+
+    if not graph_generated:
+        graph_path = None  # Indicate that no graph was generated
 
     audio_prediction = np.mean(predictions, axis=0)
     # return audio_prediction
-    return audio_prediction, predictions
+    return audio_prediction, predictions, graph_generated
 
 ### ------------------------------ 
 
@@ -1255,8 +1260,11 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         # Audio predictions
         if audio_path and predict_audio_flag:
             print("Predicting for Audio...")
-            audio_predictions, predictions = predict_audio(audio_path, model_audio, graph_path, audio_batch_size, duration=duration)
+            audio_predictions, predictions, graph_generated = predict_audio(audio_path, model_audio, graph_path, audio_batch_size, duration=duration)
 
+            # Determine graph generation
+            graph_generated = len(predictions) >= 2  # Based on your logic
+            
             # Check if audio predictions are silent (both are 0.0)
             if np.allclose(audio_predictions, [0.0, 0.0]):
                 # Handle silent or invalid audio
@@ -1291,6 +1299,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             real_audio_confidence = 0.0
             fake_audio_confidence = 0.0
             audio_interpolated = []
+            graph_generated = False  # 👈 Add this fallback
 
         # Compile output video with predictions
         compiling_output_video(frames, batch_boxes, confidences, fps, total_frames, audio_interpolated)
@@ -1305,7 +1314,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
         # Return results
         if audio_path and predict_audio_flag:
-            return real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence
+            return real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence, graph_generated
         else:
             return real_avg_video, fake_avg_video
 
@@ -1313,13 +1322,13 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
     elif input_path.lower().endswith((".wav", ".mp3", ".ogg")):
         print("Processing audio...")
-        audio_predictions, predictions = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration)
+        audio_predictions, predictions, graph_generated = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration)
         print("Audio Prediction Completed")
         real_confidence = audio_predictions[0] * 100  # Average confidence for "real"
         fake_confidence = audio_predictions[1] * 100  # Average confidence for "fake"
         print(f"Final Audio Confidence: Real: {real_confidence:.2f}% Fake: {fake_confidence:.2f}%")
         print("Successful!")
-        return real_confidence, fake_confidence
+        return real_confidence, fake_confidence, graph_generated
 
 
     elif input_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):

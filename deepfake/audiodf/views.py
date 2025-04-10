@@ -70,9 +70,13 @@ def audio_upload(request):
 
         # Put inside try block - so if any error occurs then it shows error page
         try:
-            real_confidence, fake_confidence = predict(save_path, mtcnn, model_face, model_audio, predict_audio_flag=True, graph_path=AUDIO_GRAPH_LOCATION )
+            real_confidence, fake_confidence, graph_generated  = predict(save_path, mtcnn, model_face, model_audio, predict_audio_flag=True, graph_path=AUDIO_GRAPH_LOCATION )
 
-            request.session['graph_path'] = f"{settings.MEDIA_URL}audio_predict/graph/audio_graph.png"
+            if graph_generated:
+                request.session['graph_path'] = f"{settings.MEDIA_URL}audio_predict/graph/audio_graph.png"
+            else:
+                request.session['graph_path'] = None  # or skip entirely
+                
             request.session['uploaded_audio_file'] = f"{settings.MEDIA_URL}audio_predict/audio/{urllib.parse.quote(sanitized_filename)}"
             request.session['real_confidence'] = f"{real_confidence:.2f}"
             request.session['fake_confidence'] = f"{fake_confidence:.2f}"
