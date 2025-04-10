@@ -73,11 +73,19 @@ fake_writer_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_pre
 fake_frames_write_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/fake_frames.mp4')
 annotated_image_save_location = os.path.join(settings.BASE_DIR, 'uploaded_files/image_predict/image/annotated_image.jpg')
 
+annotated_masked_image_save_location = os.path.join(settings.BASE_DIR, 'uploaded_files/image_predict/image/annotated_masked_image.jpg')
 # Directories for saving frames
 fake_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Fake_frames/')
 real_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Real_frames/')
 os.makedirs(fake_frames_dir, exist_ok=True)
 os.makedirs(real_frames_dir, exist_ok=True)
+
+# Grad videos path
+output_grad_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/grad_video.mp4')
+
+# Directories for saving Grad-CAM highlighted fake frames
+grad_fake_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Grad_Fake_frames/')
+os.makedirs(grad_fake_frames_dir, exist_ok=True)
 
 
 # -------------------- Models --------------------
@@ -570,52 +578,52 @@ def compiling_output_video(frames, boxes_batch, confidences_list, fps, total_fra
 
     out = cv2.VideoWriter(output_clip_location, fourcc, fps, (frame_width, frame_height))
 
-    for frame, boxes, confidences in tqdm(zip(frames,boxes_batch,confidences_list), total=len(frames)):
+    for idx, (frame, boxes, confidences) in tqdm(enumerate(zip(frames,boxes_batch,confidences_list)), total=len(frames)):
         frame = np.array(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         try:
-            shift = 5
-            for i, (box, confidence) in enumerate(zip(boxes, confidences)):
-                x1, y1, x2, y2 = map(int, box)
+          shift = 5
+          for i, (box, confidence) in enumerate(zip(boxes, confidences)):
+              x1, y1, x2, y2 = map(int, box)
 
-                real = float(confidence['real'])
-                fake = float(confidence['fake'])
-                label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
-                label_size = (x2 - x1) * 0.01
-                higher = int((y2 - y1) * 0.1)
-                label_box_y = y2 + higher
-                if confidence['real'] > 55:
-                    box_colour = (0, 255, 0)
-                else:
-                    box_colour = (0, 0, 255)
+              real = float(confidence['real'])
+              fake = float(confidence['fake'])
+              label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
+              label_size = (x2 - x1) * 0.01
+              higher = int((y2 - y1) * 0.1)
+              label_box_y = y2 + higher
+              if confidence['real'] > 55:
+                  box_colour = (0, 255, 0)
+              else:
+                  box_colour = (0, 0, 255)
 
-                # Draw the rectangle for face
-                cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
+              # Draw the rectangle for face
+              cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
 
-                # Thickness and Scale
-                font_scale = 0.0008 * max(frame_width, frame_height)
-                thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+              # Thickness and Scale
+              font_scale = 0.0008 * max(frame_width, frame_height)
+              thickness = max(1, int(0.002 * max(frame_width, frame_height)))
 
-                # Face value
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+              # Face value
+              cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+              cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                # Draw label text
-                text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-                _, text_height = text_size
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+              # Draw label text
+              text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+              _, text_height = text_size
+              cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+              cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                shift += (text_height + 10)
+              shift += (text_height + 10)
 
-            # Draw audio prediction text
-            if len(audio_interpolated):
-                real_audio, fake_audio = audio_interpolated[i]
-                audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
-                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
-                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+          # Draw audio prediction text
+          if len(audio_interpolated):
+              real_audio, fake_audio = audio_interpolated[idx]
+              audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
+              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
+              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-            out.write(frame)
+          out.write(frame)
 
         except Exception as e:
             print(f"Error processing frame {frames.index(frame) + 1}: {e}")
@@ -625,49 +633,87 @@ def compiling_output_video(frames, boxes_batch, confidences_list, fps, total_fra
     video_clip.write_videofile(output_video_clip_location, codec="libx264")
     video_clip.close()
 
-
-
-
-# Function to compile fake video
-def compile_fake_video(frames_with_masks, confidences_list, total_frames):
-    fps = 2
-    frame_rate = 30
-    frame_width, frame_height = frames_with_masks[0].size[0], frames_with_masks[0].size[1]
+def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list, fps, total_frames, audio_interpolated=[]):
+    frame_width, frame_height = frames[0].size[0], frames[0].size[1]
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(fake_writer_location, fourcc, fps, (frame_width, frame_height))
 
+    for idx, (frame, mask_frames, boxes, confidences) in tqdm(enumerate(zip(frames, frames_with_masks, boxes_batch, confidences_list)), total=len(frames)):
+        frame = np.array(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        shift = 5
 
-    for i, (frame_with_mask, confidences) in tqdm(enumerate(zip(frames_with_masks, confidences_list)), total=len(frames_with_masks)):
-        if confidences['fake'] > confidences['real']:
-            frame_with_mask_bgr = cv2.cvtColor(frame_with_mask, cv2.COLOR_RGB2BGR)
+        try:
+            for i, (box, confidence, mask_frame) in enumerate(zip(boxes, confidences, mask_frames)):
+                x1, y1, x2, y2 = map(int, box)
 
-            timestamp = i / frame_rate
-            time_format = convert_to_time_format(timestamp, frame_rate)
+                real = float(confidence['real'])
+                fake = float(confidence['fake'])
+                label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
+                label_size = (x2 - x1) * 0.01
+                higher = int((y2 - y1) * 0.1)
+                label_box_y = y2 + higher
 
-            label = "fake"
-            # Draw white text with black border
-            cv2.putText(frame_with_mask_bgr, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-            cv2.putText(frame_with_mask_bgr, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                if real > 55:
+                    box_colour = (0, 255, 0)
+                else:
+                    box_colour = (0, 0, 255)
+                    # Overlay the fake mask
+                    resized_mask = cv2.resize(mask_frame, (x2 - x1, y2 - y1))
+    
+                    resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)  #
+                    # resized_mask_bgr = cv2.cvtColor(np.array(resized_mask), cv2.COLOR_RGB2BGR)  #
+    
+    
+                    frame[y1:y2, x1:x2] = resized_mask_bgr
 
-            cv2.putText(frame_with_mask_bgr, time_format, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-            cv2.putText(frame_with_mask_bgr, time_format, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-            # Write frame multiple times to adjust duration
-            out.write(frame_with_mask_bgr)
+
+                # Draw bounding box
+                cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
+
+                # Label with face number
+                font_scale = 0.0008 * max(frame_width, frame_height)
+                thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+
+                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+
+                # Draw label text on top
+                text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                _, text_height = text_size
+                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+
+                shift += (text_height + 10)
+
+            # Audio text (optional)
+            if len(audio_interpolated):
+                real_audio, fake_audio = audio_interpolated[idx]
+                audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+            out.write(frame)
+
+        except Exception as e:
+            print(f"Error processing frame {idx + 1}: {e}")
 
     out.release()
+
+    # Re-encode using moviepy
     video_clip = VideoFileClip(fake_writer_location)
-    # video_clip = VideoFileClip("fake.mp4")
-
-    # Write the video with the new codec
     video_clip.write_videofile(fake_frames_write_location, codec="libx264")
-
     video_clip.close()
 
 
-def compiling_image(image, boxes, confidences):
+def compiling_image(images: list, boxes, confidences):
+    print(images)
     save_path = annotated_image_save_location  # Set the save path for the image
-    image = np.array(image[0])
+    image = np.array(images[0])
+
+    frame_height = image.shape[0]
+    frame_width = image.shape[1]
 
     # Convert to BGR format for OpenCV if the image is in RGB
     if image.shape[-1] == 3:
@@ -678,11 +724,13 @@ def compiling_image(image, boxes, confidences):
         print("No face detected in the image.")
         return
 
-    all_confidence = []  # Store confidence for each face
+    all_confidence = []  # Store confidence for each face                 # Added
 
     # Annotate each detected face
-    for face_index, (box, confidence) in enumerate(zip(boxes, confidences)):
-        for bx, conf in zip(box, confidence):
+    print(boxes)
+    for box, confidence in zip(boxes, confidences):
+        shift = 5
+        for face_index, (bx, conf) in enumerate(zip(box, confidence)):
             x1, y1, x2, y2 = map(int, bx)
             real = float(conf['real'])
             fake = float(conf['fake'])
@@ -690,6 +738,7 @@ def compiling_image(image, boxes, confidences):
             all_confidence.append(f"Real {real:.1f}% | Fake {fake:.1f}%")
 
             label = f"Real: {real:.1f}% Fake: {fake:.1f}%"
+            label_size = (x2 - x1) * 0.01
 
             # Determine box color based on confidence
             box_color = (0, 255, 0) if real > 55 else (0, 0, 255)
@@ -697,20 +746,21 @@ def compiling_image(image, boxes, confidences):
             # Draw rectangle
             cv2.rectangle(image, (x1, y1), (x2, y2), box_color, 3)
 
-            
-             # Increase font size for larger text
-            font_scale = 2.2  # Larger font scale for bigger text
-            thickness = 4  # Increase thickness for better visibility
 
-            # Draw text (LARGER FONT SIZE)
-            cv2.putText(
-                image, label, (x1, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-                (0, 0, 0), thickness , cv2.LINE_AA  # Black shadow for visibility
-            )
-            cv2.putText(
-                image, label, (x1, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-                (255, 255, 255), thickness, cv2.LINE_AA  # White text
-            )
+            # Label with face number
+            font_scale = 0.0008 * max(frame_width, frame_height)
+            thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+
+            cv2.putText(image, f'Face {face_index+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+            cv2.putText(image, f'Face {face_index+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+
+            # Draw label text on top
+            text_size = cv2.getTextSize(f'Face {face_index+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+            _, text_height = text_size
+            cv2.putText(image, f'Face {face_index+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+            cv2.putText(image, f'Face {face_index+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+
+            shift += (text_height + 10)
 
     # Save the annotated image
     if os.path.exists(save_path):
@@ -722,6 +772,96 @@ def compiling_image(image, boxes, confidences):
 
     return all_confidence
 
+
+def compiling_fake_image(images: list, masked_faces, boxes, confidences):
+    print(images)
+    save_path = annotated_masked_image_save_location  # Set the save path for the image
+    image = np.array(images[0])
+
+    frame_height = image.shape[0]
+    frame_width = image.shape[1]
+
+    # Convert to BGR format for OpenCV if the image is in RGB
+    if image.shape[-1] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+    # Ensure faces were detected
+    if not boxes or len(boxes) == 0:
+        print("No face detected in the image.")
+        return
+
+    all_confidence = []  # Store confidence for each face                 # Added
+
+    # Annotate each detected face
+    # print(boxes)
+    for box, confidence, masked_face in zip(boxes, confidences, masked_faces):
+        shift = 5
+        for face_index, (bx, conf, face) in enumerate(zip(box, confidence, masked_face)):
+            x1, y1, x2, y2 = map(int, bx)
+            real = float(conf['real'])
+            fake = float(conf['fake'])
+
+            # ✅ Clamp coordinates to image bounds
+            x1 = max(0, min(x1, image.shape[1] - 1))
+            x2 = max(0, min(x2, image.shape[1]))
+            y1 = max(0, min(y1, image.shape[0] - 1))
+            y2 = max(0, min(y2, image.shape[0]))
+
+            # ✅ Check for valid bounding box dimensions
+            if x2 <= x1 or y2 <= y1:
+                print(f"⚠️ Skipped face {face_index+1} — invalid box coords: ({x1}, {y1}), ({x2}, {y2})")
+                continue
+
+            all_confidence.append(f"Real {real:.1f}% | Fake {fake:.1f}%")
+
+            label = f"Real: {real:.1f}% Fake: {fake:.1f}%"
+            label_size = (x2 - x1) * 0.01
+
+            # # Determine box color based on confidence
+            box_color = (0, 255, 0) if real > 55 else (0, 0, 255)
+
+            # # Overlay the fake mask
+            # resized_mask = cv2.resize(face, (x2 - x1, y2 - y1))
+            # resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
+            # image[y1:y2, x1:x2] = resized_mask
+
+# Only annotate if fake frame detected
+            if real < 55:
+                # Overlay the fake mask
+                resized_mask = cv2.resize(face, (x2 - x1, y2 - y1))
+                resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
+                image[y1:y2, x1:x2] = resized_mask
+
+
+
+            # Draw rectangle
+            cv2.rectangle(image, (x1, y1), (x2, y2), box_color, 3)
+
+
+            # Label with face number
+            font_scale = 0.0008 * max(frame_width, frame_height)
+            thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+
+            cv2.putText(image, f'Face {face_index+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+            cv2.putText(image, f'Face {face_index+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+
+            # Draw label text on top
+            text_size = cv2.getTextSize(f'Face {face_index+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+            _, text_height = text_size
+            cv2.putText(image, f'Face {face_index+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+            cv2.putText(image, f'Face {face_index+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+
+            shift += (text_height + 10)
+
+    # Save the annotated image
+    if os.path.exists(save_path):
+        os.remove(save_path)  # Remove existing file
+    cv2.imwrite(save_path, image)
+
+    print(f"Annotated masked image saved to {save_path}")
+    print("Confidence List:", all_confidence)  # Print confidence list
+
+    return all_confidence
 
 # -------------------- Generate Graph for audio --------------------
 
@@ -854,6 +994,7 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     # return audio_prediction
     return audio_prediction, predictions
 
+### ------------------------------ 
 
 def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, grad: bool = False):
     # Define batch size
@@ -862,8 +1003,7 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
     batch_size = batch_size
     num_batches = ceil(len(input_images) / batch_size)
     # Initialize lists to store results
-    confidences_list = []
-    visualizations = []
+    confidences_list, visualizations_list = [], []
     batch_boxes = []
 
     # Prepare Grad-CAM if requested
@@ -892,22 +1032,19 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         # Convert the list of faces to a tensor
         batch_faces =  torch.cat(batch_faces, dim=0).to(torch.float32).to(device) / 255.0  # Normalize faces to [0, 1]
         batch_faces = F.interpolate(batch_faces, size=(256, 256), mode='bilinear', align_corners=False)  # Resize faces
-        # print(batch_faces)
-        # print(next(model_face.parameters()).device)
-        # print(batch_faces.device)
+        print(next(model_face.parameters()).device)
+        print(batch_faces.device)
 
         # Perform batch prediction
         with torch.no_grad():
-            # print(next(model_face.parameters())[0,0,0,0].item())
             outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
-            # print(next(model_face.parameters())[0,0,0,0].item())
             real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
             fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
-            # print(torch.is_grad_enabled())
-            # print(real_predictions)
+            print(torch.is_grad_enabled())
+            print(real_predictions)
 
         # Process each face in the batch
-        confidences = []
+        confidences, visualizations = [], []
         for j, face in enumerate(batch_faces):
             # Generate Grad-CAM visualization if enabled
             if grad:
@@ -915,8 +1052,8 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
                 prev_face = prev_face.astype('uint8')
                 face_image_to_plot = prev_face.copy()
                 targets = [ClassifierOutputTarget(0)]
-                grayscale_cam = cam(input_tensor=batch_faces, targets=targets, eigen_smooth=True)
-                grayscale_cam = grayscale_cam[j]  # Select Grad-CAM for the current face
+                grayscale_cam = cam(input_tensor=face.unsqueeze(0), targets=targets, eigen_smooth=True)
+                grayscale_cam = grayscale_cam[0]  # Select Grad-CAM for the current face
                 visualization = show_cam_on_image(face_image_to_plot / 255.0, grayscale_cam, use_rgb=True)
                 face_with_mask = cv2.addWeighted(prev_face, 1, visualization, 0.5, 0)
                 visualizations.append(face_with_mask)
@@ -927,17 +1064,25 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
                 'fake': fake_predictions[j] * 100
             }
             confidences.append(confidence)
+        print(len(confidences))
+        print(len(visualizations))
         iterator = iter(confidences)
         confidences = [[next(iterator) for _ in sublist] for sublist in probs]
+
+        iterator = iter(visualizations)
+        visualizations = [[next(iterator) for _ in sublist] for sublist in probs]
+
         confidences_list.extend(confidences)
+        visualizations_list.extend(visualizations)
 
     try:
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     except:
         pass
-    # print(confidences_list)
-    return batch_boxes, confidences_list, visualizations
+    print(confidences_list)
+    return batch_boxes, confidences_list, visualizations_list
+
 
 # -------------------- Store Real and Fake frames inside a folder with labling --------------------
 
@@ -963,44 +1108,112 @@ def process_and_save_frames(frames, confidences, batch_boxes):
 
             # Store only the first and last frame of each sequence of consecutive frames
             if consecutive_count == 1 or consecutive_count % interval == 0:
-                # Crop face, resize, and annotate with confidence text
-                x1, y1, x2, y2 = map(int, box)
-                cropped_face = frame.crop((x1, y1, x2, y2)).resize((256, 256))
+              # Crop face, resize, and annotate with confidence text
+              x1, y1, x2, y2 = map(int, box)
+              cropped_face = frame.crop((x1, y1, x2, y2)).resize((256, 256))
 
-                # Create image with space for text
-                new_height = cropped_face.height + 30
-                annotated_image = Image.new("RGB", (cropped_face.width, new_height), color=(255, 255, 255))
-                annotated_image.paste(cropped_face, (0, 0))
+              # Create image with space for text
+              new_height = cropped_face.height + 30
+              annotated_image = Image.new("RGB", (cropped_face.width, new_height), color=(255, 255, 255))
+              annotated_image.paste(cropped_face, (0, 0))
 
-                # Add confidence text
-                draw = ImageDraw.Draw(annotated_image)
-                text = f"{label} {int(conf[label.lower()])}%"
-                text_bbox = draw.textbbox((0, 0), text, font=font)
-                text_x = (cropped_face.width - (text_bbox[2] - text_bbox[0])) // 2
-                text_y = cropped_face.height + (30 - (text_bbox[3] - text_bbox[1])) // 2
-                draw.text((text_x, text_y), text, fill="black", font=font)
+              # Add confidence text
+              draw = ImageDraw.Draw(annotated_image)
+              text = f"{label} {int(conf[label.lower()])}%"
+              text_bbox = draw.textbbox((0, 0), text, font=font)
+              text_x = (cropped_face.width - (text_bbox[2] - text_bbox[0])) // 2
+              text_y = cropped_face.height + (30 - (text_bbox[3] - text_bbox[1])) // 2
+              draw.text((text_x, text_y), text, fill="black", font=font)
 
-                # Save the annotated image
-                if label == "Real":
-                    real_frame_count += 1
-                    frame_name = f"real_frame{real_frame_count}.jpg"
-                else:
-                    fake_frame_count += 1
-                    frame_name = f"fake_frame{fake_frame_count}.jpg"
+              # Save the annotated image
+              if label == "Real":
+                  real_frame_count += 1
+                  frame_name = f"real_frame{real_frame_count}.jpg"
+              else:
+                  fake_frame_count += 1
+                  frame_name = f"fake_frame{fake_frame_count}.jpg"
 
-                frame_path = os.path.join(save_dir, frame_name)
-                annotated_image.save(frame_path, format="JPEG")
-                print(f"Saved {label} face {j + 1} of frame {i + 1} to {frame_path}")
+              frame_path = os.path.join(save_dir, frame_name)
+              annotated_image.save(frame_path, format="JPEG")
+            #   print(f"Saved {label} face {j + 1} of frame {i + 1} to {frame_path}")
 
         previous_label = label  # Update previous label
+
+# --------------------------- saving only fake Grad-CAM frames ---------------------------
+def process_and_save_gradcam_full_frames(frames, confidences, boxes_list, gradcam_visualizations):
+    font = ImageFont.load_default()
+    fake_frame_count = 0  # Only tracking fake frames now
+
+    for i, (frame, confidence_set, boxes, gradcam_set) in enumerate(zip(frames, confidences, boxes_list, gradcam_visualizations)):
+        frame_np = frame if isinstance(frame, np.ndarray) else np.array(frame)
+        base_frame = frame_np.copy()
+
+        for j, (confidence, box, gradcam_face) in enumerate(zip(confidence_set, boxes, gradcam_set)):
+            label = "Real" if confidence['real'] > confidence['fake'] else "Fake"
+            
+            # Only process and save if label is Fake
+            if label != "Fake":
+                continue
+
+            x1, y1, x2, y2 = map(int, box)
+            h, w = base_frame.shape[:2]
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w, x2), min(h, y2)
+
+            if x2 <= x1 or y2 <= y1:
+                print(f"Skipped frame {i+1}, face {j+1} — invalid box coords: ({x1}, {y1}), ({x2}, {y2})")
+                continue
+
+            face_region = base_frame[y1:y2, x1:x2]
+            if face_region.size == 0:
+                print(f"Skipped frame {i+1}, face {j+1} — empty face_region")
+                continue
+
+            try:
+                gradcam_face_resized = cv2.resize(gradcam_face, (x2 - x1, y2 - y1))
+            except Exception as e:
+                # print(f"Resize failed on frame {i+1}, face {j+1}: {e}")
+                continue
+
+            if gradcam_face_resized.shape != (y2 - y1, x2 - x1, 3):
+                # print(f"Shape mismatch: {gradcam_face_resized.shape} vs {(y2 - y1, x2 - x1, 3)}")
+                continue
+
+            full_frame_with_gradcam = base_frame.copy()
+            full_frame_with_gradcam[y1:y2, x1:x2] = gradcam_face_resized
+
+            # Convert to PIL and annotate
+            full_frame_pil = Image.fromarray(full_frame_with_gradcam)
+            new_height = full_frame_pil.height + 30
+            annotated_image = Image.new("RGB", (full_frame_pil.width, new_height), color=(255, 255, 255))
+            annotated_image.paste(full_frame_pil, (0, 0))
+
+            draw = ImageDraw.Draw(annotated_image)
+            text = f"{label} {int(confidence[label.lower()])}%"
+            text_bbox = draw.textbbox((0, 0), text, font=font)
+            text_x = (full_frame_pil.width - (text_bbox[2] - text_bbox[0])) // 2
+            text_y = full_frame_pil.height + (30 - (text_bbox[3] - text_bbox[1])) // 2
+            draw.text((text_x, text_y), text, fill="black", font=font)
+
+            # Save fake frame
+            fake_frame_count += 1
+            frame_name = f"grad_fake_frame{fake_frame_count}.jpg"
+            frame_path = os.path.join(grad_fake_frames_dir, frame_name)
+            annotated_image.save(frame_path, format="JPEG")
+            # print(f"Saved Grad-CAM fake full-frame {j + 1} of video frame {i + 1} to {frame_path}")
+
+
+
+
 
 
 # -------------------- Prediction --------------------
 
 # Function to predict deep-fake and generate output video
 def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=100, video_batch_size=100, fake_frames: bool = False, predict_audio_flag: bool = False, graph_path=None, _return=False):
+# pass audio_batch_size and video_batch_size in function call (means in views.py) according to system memory (default I pass - 100)
 
-# One extra parameter - save_frames
+# One extra parameter - save_frames (For collab)
 # def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=100, video_batch_size=100, fake_frames: bool = False, predict_audio_flag: bool = False, save_frames: bool = False, graph_path=None, _return=False):
 
     # if input_path.lower().endswith((".mp4", ".mkv","hevc")):
@@ -1028,6 +1241,9 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         # Save frames with predictions
         # process_and_save_frames(frames, confidences, batch_boxes) if save_frames else None
         process_and_save_frames(frames, confidences, batch_boxes)
+
+        # saving Grad-CAM frames
+        process_and_save_gradcam_full_frames(frames, confidences,batch_boxes, face_with_mask)
 
         # # Calculate average confidence for video
         confd = [conf for confs in confidences for conf in confs]
@@ -1079,9 +1295,13 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         # Compile output video with predictions
         compiling_output_video(frames, batch_boxes, confidences, fps, total_frames, audio_interpolated)
 
+        # --------------------
+        compile_fake_video(frames, face_with_mask, batch_boxes, confidences, fps, total_frames, audio_interpolated) if fake_frames else None
+
         # Combine audio back into the output video if it exists
         if audio_path:
             combine_video_audio(input_path)
+            combine_video_audio(input_path, output_grad_location, fake_frames_write_location)
 
         # Return results
         if audio_path and predict_audio_flag:
@@ -1112,9 +1332,12 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         if not batch_boxes:
             print("No faces detected in the image.")
             return
-        
+
         print("Compiling image...")
         all_confidence = compiling_image(image, batch_boxes, confidences)
+        print("-------------")
+        if fake_frames:
+          all_confidence = compiling_fake_image(image, face_with_mask, batch_boxes, confidences)
         print("Compilation Done")
 
         return all_confidence

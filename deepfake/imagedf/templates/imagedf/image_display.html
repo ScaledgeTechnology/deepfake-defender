@@ -88,9 +88,40 @@
     <div class="main-container">
         <h1 class="main-heading text-center text-4xl font-bold my-6">Image Analysis Results</h1>
     
-        <div class="flex justify-center mb-6">
-            <img src="{{ image_file }}" alt="Annotated Image" class="annotated-image">
-        </div>
+<!-- Container for both images -->
+
+{% if show_message_only %}
+  <div class="flex flex-col gap-6 mb-6 px-4">
+    <div class="flex justify-center">
+      <img src="{{ image_file }}" alt="Annotated Image" class="rounded-lg shadow-md max-w-3xl h-auto">
+    </div>
+    <p class="text-center text-gray-600 text-base mt-4">
+      {{ real_frame_message }}
+    </p>
+  </div>
+{% else %}
+  <div class="flex flex-col md:flex-row gap-6 mb-6 px-4">
+    <!-- Left: Bounding Box Detection -->
+    <div class="flex-1">
+      <h2 class="sub-heading text-xl font-semibold mb-4">Bounding Box Detection</h2>
+      <div class="flex justify-center">
+        <img src="{{ image_file }}" alt="Annotated Image" class="rounded-lg shadow-md max-w-full h-auto">
+      </div>
+    </div>
+
+    <!-- Right: Grad-CAM Visualization -->
+    <div class="flex-1">
+      <h2 class="sub-heading text-xl font-semibold mb-4">Grad-CAM Fake Frame Visualization</h2>
+      <div class="flex justify-center">
+        <img src="{{ masked_image_file }}" alt="Grad-CAM Image" class="rounded-lg shadow-md max-w-full h-auto">
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+
+
+
         
         <h2 class="sub-heading text-2xl font-semibold my-6">Confidence Scores</h2>
         <div class="flex flex-wrap justify-center gap-6">
@@ -98,7 +129,6 @@
                 <div class="blur-box p-6 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 text-center">
                     <div class="flex flex-col items-center">
 <!-- we take the image from views.py (real/fake) -->
-
                         <img src="{% static confidence.image %}" alt="Confidence Image" class="confidence-image">
                         <p class="text-lg font-medium">Face {{ forloop.counter }}</p>
                     </div>

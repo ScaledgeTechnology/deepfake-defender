@@ -26,6 +26,8 @@ VIDEO_GRAPH_LOCATION = os.path.join(settings.BASE_DIR, 'uploaded_files/video_pre
 output_audio_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_audio_video.mp4')
 output_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_video.mp4')
 
+# output_grad_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/grad_video.mp4')
+
 
 # Define paths for uploaded and trimmed videos
 TRIMMED_VIDEO_PATH = os.path.join(settings.MEDIA_ROOT, "video_predict/video/trimmed/")
@@ -87,7 +89,9 @@ def video_upload(request):
         try:
             # Call the predict function with the appropriate flag
             if predict_audio_flag:
-                real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, graph_path=VIDEO_GRAPH_LOCATION)
+                real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION)
+                # User can pass audio_batch_size and video_batch_size as per their system memory
+                # real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION, audio_batch_size=64, video_batch_size=64)
 
                 if real_audio_confidence == 0.0 and fake_audio_confidence == 0.0:
                     print("Silent audio detected in the uploaded video.")
@@ -97,7 +101,7 @@ def video_upload(request):
                     request.session['real_audio_confidence'] = f"{real_audio_confidence:.2f}%" 
                     request.session['fake_audio_confidence'] = f"{fake_audio_confidence:.2f}%"
             else:
-                real_avg_video, fake_avg_video = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio)
+                real_avg_video, fake_avg_video = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, fake_frames=True)
 
             output_video_path = None
             if os.path.exists(os.path.join(VIDEO_UPLOAD_PATH, "output_audio_video.mp4")):
@@ -105,9 +109,12 @@ def video_upload(request):
             elif os.path.exists(os.path.join(VIDEO_UPLOAD_PATH, "output_video.mp4")):
                 output_video_path = os.path.join(settings.MEDIA_URL, "video_predict/video/output_video.mp4")
 
+
              # Store the data in session
-            # request.session['uploaded_video_file'] = output_video_path
             request.session['uploaded_video_file'] = output_video_path
+
+            request.session['grad_output_video'] = f"{settings.MEDIA_URL}video_predict/video/grad_video.mp4"
+            # request.session['grad_output_video'] = grad_output_video_path
             request.session['graph_path'] = f"{settings.MEDIA_URL}video_predict/graph/audio_graph.png"
             request.session['real_avg_video'] = f"{real_avg_video:.2f}%"
             request.session['fake_avg_video'] = f"{fake_avg_video:.2f}%"
@@ -127,6 +134,7 @@ def video_upload(request):
 def video_display(request):
     # Retrieve all required data from the session
     video_path = request.session.get('uploaded_video_file', None)
+    grad_video_path = request.session.get('grad_output_video', None)
     graph_path = request.session.get('graph_path', None)
     real_avg_video = request.session.get('real_avg_video', None)
     fake_avg_video = request.session.get('fake_avg_video', None)
@@ -137,6 +145,9 @@ def video_display(request):
     real_dir = os.path.join(settings.MEDIA_ROOT, 'video_predict', 'Real_frames')
     fake_dir = os.path.join(settings.MEDIA_ROOT, 'video_predict', 'Fake_frames')
 
+    # Get fake grad frames
+    grad_fake_dir = os.path.join(settings.MEDIA_ROOT, 'video_predict', 'Grad_Fake_frames')
+
     real_images = [
         os.path.join(settings.MEDIA_URL, 'video_predict', 'Real_frames', img)
         for img in os.listdir(real_dir) if img.endswith('.jpg')
@@ -146,10 +157,16 @@ def video_display(request):
         for img in os.listdir(fake_dir) if img.endswith('.jpg')
     ]
 
+    grad_fake_images = [
+        os.path.join(settings.MEDIA_URL, 'video_predict', 'Grad_Fake_frames', img)
+        for img in os.listdir(grad_fake_dir) if img.endswith('.jpg')
+    ]
+
 
     # Pass the data to the template
     context = {
         'video_path': video_path,
+        'grad_video_path': grad_video_path,
         'graph_path': graph_path,
         'real_avg_video': real_avg_video,
         'fake_avg_video': fake_avg_video,
@@ -158,6 +175,8 @@ def video_display(request):
 
         'real_images': real_images,
         'fake_images': fake_images,
+
+        'grad_fake_images': grad_fake_images,
     }
 
     return render(request, 'videodf/video_display.html', context)

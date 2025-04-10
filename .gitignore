@@ -7,6 +7,9 @@
 # Ignore the virtual environment
 .venv/
 
+# Ignore the virtual environment
+.github/
+
 # Ignore build artifacts
 build/
 

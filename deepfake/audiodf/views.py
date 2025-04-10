@@ -7,7 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 import re
 import urllib.parse
 
-
 from common.deepfake_logic import load_models,predict
 # from common.old_logic_deepfake import load_models,predict
 
@@ -47,6 +46,8 @@ def audio_upload(request):
         video_predict_path = os.path.join(settings.BASE_DIR, "uploaded_files/audio_predict/")
         clear_directory_files(video_predict_path)
 
+         # Clear all session data at the start
+        request.session.flush()
 
         audio_file = request.FILES["audio_file"]
 

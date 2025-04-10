@@ -38,7 +38,7 @@
         }
 
         /* Blur box styles */
-        .blur-box {
+      .blur-box {
             background: radial-gradient(circle, rgba(0, 163, 109, 0.32), rgba(17, 67, 50, 0.42));
             border: 2px solid #00a36e;
             color: #aeb9be;
@@ -46,7 +46,6 @@
             border-radius: 10px;
         }
 
-        /* Scrollbar styling */
         .scroll-container {
             display: flex;
             overflow-x: auto;
@@ -65,10 +64,8 @@
             background-color: #00a36e;
             border-radius: 5px;
         }
-
-        /* Frame image styling */
         .scroll-image {
-            height: 200px; /* Increased size */
+            height: 200px; 
             margin-right: 10px;
             border: 2px solid #00a36e;
             border-radius: 5px;
@@ -76,7 +73,53 @@
 
         .scroll-image:last-child {
             margin-right: 0;
-        }
+        } 
+
+/*
+.blur-box {
+    background: radial-gradient(circle, rgba(0, 163, 109, 0.32), rgba(17, 67, 50, 0.42));
+    border: 2px solid #00a36e;
+    color: #aeb9be;
+    box-shadow: 0 4px 10px rgba(0, 163, 109, 0.2);
+    border-radius: 10px;
+}
+
+.scroll-container {
+    display: flex;
+    flex-direction: column; 
+    overflow-y: auto;       
+    max-height: 600px;     
+    min-height: 300px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+
+.scroll-container::-webkit-scrollbar {
+    width: 8px;
+    background-color: rgba(10, 10, 10, 0.52);
+    border-radius: 5px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+    background-color: #00a36e;
+    border-radius: 5px;
+}
+
+
+.scroll-image {
+    height: 180px;
+    margin-bottom: 10px;
+    border: 2px solid #00a36e;
+    border-radius: 5px;
+    object-fit: cover;
+}
+
+.scroll-image:last-child {
+    margin-bottom: 0;
+}
+
+*/
 
         /* Confidence image styling */
         .confidence-image {
@@ -102,20 +145,39 @@
     <!-- Main Heading -->
     <h1 class="main-heading text-center text-4xl font-bold my-6">Video Prediction Results</h1>
 
-    <!-- Video Section -->
-    <div class="flex justify-center mb-6">
+ <!-- Dual Video Section -->
+ <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Left Video -->
+    <div id="left-vid-div" class="flex-1">
+        <h2 class="sub-heading text-center text-2xl font-semibold mb-4">Bounding Box Detection</h2>
         {% if video_path %}
-            <video controls class="w-full lg:w-2/4 video-dis rounded-lg shadow-lg">
+            <video controls class="w-full video-dis rounded-lg shadow-md">
                 <source src="{{ video_path }}" type="video/{{ video_path|slice:'-3:'|lower }}">
                 Your browser does not support the video tag.
             </video>
         {% else %}
-            <p class="text-red-500">There is an issue loading the video</p>
+            <p class="text-red-500">Left video missing</p>
         {% endif %}
     </div>
 
+    <!-- Right Video -->
+    <div id="right-vid-div" class="flex-1">
+        <h2 class="sub-heading text-center text-2xl font-semibold mb-4">Grad-CAM Visualization</h2>
+        {% if grad_video_path %}
+            <video controls class="w-full video-dis rounded-lg shadow-md">
+                <source src="{{ grad_video_path }}" type="video/{{ grad_video_path|slice:'-3:'|lower }}">
+                Your browser does not support the video tag.
+            </video>
+        {% else %}
+            <p class="text-red-500">Right video missing</p>
+        {% endif %}
+    </div>
+</div>
+
+
+ <!-- Confidence Scores Section -->
     {% comment %} 
-    
+
     <!-- Sub-Heading -->
     <h2 class="sub-heading text-center text-2xl font-semibold my-4">Confidence Scores</h2>
 
@@ -141,11 +203,11 @@
     </div> 
     {% endcomment %}
 
+   
+  <!-- Frames Section -->
+<h2 class="sub-heading text-center text-2xl font-semibold my-4">Frames Analysis</h2>
 
-    <!-- Frames Section -->
-    <h2 class="sub-heading text-center text-2xl font-semibold my-4">Frames Analysis</h2>
-
-    <div class="flex flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-6">
+<div class="flex flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-6">
 <!-- Real Frames -->
 <div class="blur-box p-4 w-full sm:w-1/2">
     <h3 class="text-lg font-medium text-center mb-4">Real Frames</h3>
@@ -174,7 +236,29 @@
     </div>
 </div>
 
+</div>
+
+    
+    <h2 class="sub-heading text-center text-2xl font-semibold my-4">
+        Grad-CAM Visualization of Detected Fake Frames
+    </h2>
+    
+    <div class="flex flex-col space-y-6">
+        <div class="blur-box p-4 w-full">
+            <h3 class="text-lg font-medium text-center mb-4">Fake Frames</h3>
+            <div class="scroll-container">
+                {% if grad_fake_images %}
+                    {% for img in grad_fake_images %}
+                        <img src="{{ img }}" alt="Fake Frame" class="scroll-image">
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-gray-500">No fake frames available</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
+    
+
 
     <!-- Audio Confidence Section -->
     {% if real_audio_confidence and fake_audio_confidence %}
