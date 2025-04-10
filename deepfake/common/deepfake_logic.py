@@ -3,7 +3,7 @@ import cv2
 import librosa
 import gc
 
-# from PIL import Image
+from PIL import Image
 from PIL import Image, ImageDraw, ImageFont
 # from tqdm.notebook import tqdm, trange
 # This is only for jupyter nootbook , colab-> notebook.tqdm
@@ -52,7 +52,7 @@ from django.conf import settings
 
 
 # -------------------- All Paths --------------------
-# Models path
+# ---------- Models path -------------
 # Hugging Face repo details
 HF_REPO = "Scaledge/DeepFakeDetectorModels"
 
@@ -63,7 +63,7 @@ audio_model_location = hf_hub_download(repo_id=HF_REPO, filename="audiotrans_nme
 # video_model_location = os.path.join(settings.BASE_DIR, 'models/resnetinceptionv1_epoch_32.pth')
 # audio_model_location = os.path.join(settings.BASE_DIR, 'models/audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth')
 
-# saving paths
+# ----------- saving paths ------------
 audio_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/audio.wav')
 output_audio_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_audio_video.mp4')
 output_video_clip_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_video.mp4')
@@ -71,9 +71,10 @@ output_video_clip_location = os.path.join(settings.BASE_DIR, 'uploaded_files/vid
 output_clip_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output.mp4')
 fake_writer_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/fake.mp4')
 fake_frames_write_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/fake_frames.mp4')
-annotated_image_save_location = os.path.join(settings.BASE_DIR, 'uploaded_files/image_predict/image/annotated_image.jpg')
 
+annotated_image_save_location = os.path.join(settings.BASE_DIR, 'uploaded_files/image_predict/image/annotated_image.jpg')
 annotated_masked_image_save_location = os.path.join(settings.BASE_DIR, 'uploaded_files/image_predict/image/annotated_masked_image.jpg')
+
 # Directories for saving frames
 fake_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Fake_frames/')
 real_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Real_frames/')
@@ -662,11 +663,9 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
                     resized_mask = cv2.resize(mask_frame, (x2 - x1, y2 - y1))
     
                     resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)  #
-                    # resized_mask_bgr = cv2.cvtColor(np.array(resized_mask), cv2.COLOR_RGB2BGR)  #
-    
+                    # resized_mask_bgr = cv2.cvtColor(np.array(resized_mask), cv2.COLOR_RGB2BGR)  #    
     
                     frame[y1:y2, x1:x2] = resized_mask_bgr
-
 
 
                 # Draw bounding box
@@ -706,6 +705,7 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
     video_clip.write_videofile(fake_frames_write_location, codec="libx264")
     video_clip.close()
 
+# -------------------------------------------------------------------------------------------------------------------
 
 def compiling_image(images: list, boxes, confidences):
     print(images)
@@ -999,7 +999,7 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     # return audio_prediction
     return audio_prediction, predictions, graph_generated
 
-### ------------------------------ 
+### ---------------------------------------------------------------------------------------------- 
 
 def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, grad: bool = False):
     # Define batch size
@@ -1210,16 +1210,11 @@ def process_and_save_gradcam_full_frames(frames, confidences, boxes_list, gradca
 
 
 
-
-
 # -------------------- Prediction --------------------
 
 # Function to predict deep-fake and generate output video
 def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=100, video_batch_size=100, fake_frames: bool = False, predict_audio_flag: bool = False, graph_path=None, _return=False):
 # pass audio_batch_size and video_batch_size in function call (means in views.py) according to system memory (default I pass - 100)
-
-# One extra parameter - save_frames (For collab)
-# def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=100, video_batch_size=100, fake_frames: bool = False, predict_audio_flag: bool = False, save_frames: bool = False, graph_path=None, _return=False):
 
     # if input_path.lower().endswith((".mp4", ".mkv","hevc")):
     if input_path.lower().endswith((".mp4")):
