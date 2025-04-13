@@ -1,23 +1,24 @@
-# **Deepfake Defender**
+# **Deepfake Defender** 
+@A Product Made By Scaledge
 
 **Deepfake Defender** is revolutionizing the way media is created, using artificial intelligence to generate hyper-realistic videos, images, and audio that can be nearly impossible to distinguish from reality. While this innovation brings incredible creative opportunities, it also introduces serious risks—misinformation, identity fraud, and privacy breaches are just a few of the challenges. At Detect AI, we are committed to staying ahead of this rapidly evolving technology, providing powerful tools that help users detect and prevent malicious deepfake content. Our goal is to ensure digital authenticity, giving you the confidence to trust what you see and hear in an age where manipulation is just a click away.
 
 ---
 ### **Demo Video**
 
-<a href="https://youtu.be/GdRy9i-CTIs">
+<a href="https://youtu.be/5rw_TM2Md0k">
     <img src="https://github.com/ScaledgeTechnology/deepfake-defender/blob/main/demo_gif_deepfake.gif" alt="Deepfake Defender Demo" />
 </a>
 
-*Watch the full video on [YouTube](https://youtu.be/GdRy9i-CTIs)* 
-<a href="https://youtu.be/d5mOhsKQorM">
+*Watch the full video on [YouTube](https://youtu.be/5rw_TM2Md0k)* 
+<a href="https://youtu.be/5rw_TM2Md0k">
     <img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube Logo" width="17" style="vertical-align: middle;" />
 </a>
 
 or
 
-*Watch the full video on [Google Drive](https://drive.google.com/file/d/1t7_y_mZfEVYDfnKr7BFs-sxxd5A5Lo_d/view?usp=sharing)* 
-<a href="https://drive.google.com/file/d/1t7_y_mZfEVYDfnKr7BFs-sxxd5A5Lo_d/view?usp=sharing">
+*Watch the full video on [Google Drive](https://drive.google.com/file/d/1PUtOSitxSY3_xFo2XbUzma3AM1nGanl6/view?usp=sharing)* 
+<a href="https://drive.google.com/file/d/1PUtOSitxSY3_xFo2XbUzma3AM1nGanl6/view?usp=sharing">
     <img src="https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" alt="Google Drive Logo" width="17" style="vertical-align: middle;" />
 </a>
 

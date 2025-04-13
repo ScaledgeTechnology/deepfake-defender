@@ -1069,7 +1069,7 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
                 'fake': fake_predictions[j] * 100
             }
             confidences.append(confidence)
-        print(len(confidences))
+        # print(len(confidences))
         print(len(visualizations))
         iterator = iter(confidences)
         confidences = [[next(iterator) for _ in sublist] for sublist in probs]
@@ -1085,7 +1085,7 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         torch.cuda.synchronize()
     except:
         pass
-    print(confidences_list)
+    # print(confidences_list)
     return batch_boxes, confidences_list, visualizations_list
 
 
@@ -1349,3 +1349,4 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
     else:
         raise ValueError(f"Unsupported file format for input path: {input_path}")
+ 

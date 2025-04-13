@@ -87,6 +87,8 @@ def video_upload(request):
 
         # Put inside try block - so if any error occurs then it shows error page
         try:
+            graph_generated = False  # <- Ensure it's always defined
+            
             # Call the predict function with the appropriate flag
             if predict_audio_flag:
                 real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence, graph_generated  = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION)
