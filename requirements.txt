@@ -29,3 +29,8 @@ huggingface_hub
 
 # If librosa warning shows install manually-
 # pip install librosa
+
+
+channels 
+channels-redis
+daphne

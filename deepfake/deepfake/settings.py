@@ -33,6 +33,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',                           ####################
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,7 +46,25 @@ INSTALLED_APPS = [
     'videodf',
     'audiodf',
     'imagedf',
+
+    'channels',           #########
+    
 ]
+
+ASGI_APPLICATION = 'deepfake.asgi.application'
+
+# For production, use Redis as channel layer
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+
+        # "CONFIG": {
+        #     "hosts": [("127.0.0.1", 6379)],
+        # },
+
+    },
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -120,17 +140,17 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
+
 
 #used in production to serve static files
-# STATIC_ROOT = "/home/app/staticfiles/"                          # 
+# STATIC_ROOT = "static/"                          # 
 
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
     # os.path.join(BASE_DIR, 'uploaded_images'),
     os.path.join(BASE_DIR, 'static'),
-    os.path.join(BASE_DIR, 'models'),
+    # os.path.join(BASE_DIR, 'models'),
 ####    # os.path.join(BASE_DIR, 'videodf/static'),
 ]
 

@@ -387,34 +387,23 @@
     50% { transform: scale(1.2); } /* Zoom in slightly */
 }
 
-   /* Text below container */
-.analyzing-text {
-    margin-top: 10px; 
-    font-size: 1rem; 
-    font-weight: bold;
-    text-align: center;
-    color: #aeb9be;
-    white-space: nowrap; 
-    overflow: hidden; 
-    width: 0; 
-    animation: wait-type 3s infinite; 
+.a-progress-bar-container {
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  margin-top: 10px;
 }
-
-/* Typing effect animation */
-
-
-@keyframes wait-type {
-        0% {
-            width: 0;
-        }
-        99% {
-            width: 100%;
-        }
-        100% {
-            width: 0; 
-        }
-    }
-
+.a-progress-bar {
+  height: 10px;
+  background-color: #4CAF50;
+  border-radius: 5px;
+  transition: width 0.3s;
+}
+.a-progress-message {
+  margin-top: 5px;
+  font-size: 0.9em;
+  color: #666;
+}
 
 
     /* --------------- */
@@ -453,9 +442,14 @@
         </div>
     
         <!-- Analyzing Text -->
-        <div class="analyzing-text">
-          Analyzing your Image . . .
-        </div>
+        <div class="analyzing-text-video">
+          Analyzing your Video: <span id="a-progress-percent">0</span>%
+      </div>
+      <div id="a-progress-message" class="a-progress-message">Starting analysis...</div>
+      <div class="a-progress-bar-container">
+          <div id="a-progress-bar" class="a-progress-bar" style="width: 0%"></div>
+      </div>
+
       </div>
     </div>
 
@@ -597,9 +591,69 @@
         });
 
    // submit
-   $("form").on("submit", function (e) {
+   //$("form").on("submit", function (e) {
+  //  $('.overlay_d').show();
+  //}); 
+
+  $("form").on("submit", function(e) {
+    e.preventDefault();
+    const form = this;
+    const taskId = Date.now().toString();
+    
+    // Get the correct WebSocket URL
+    //const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    //const wsUrl = wsProtocol + window.location.host + '/ws/audio_progress/' + taskId + '/';
+
+    const wsUrl = `ws://${window.location.host}/ws/progress/image/${taskId}/`;
+    
+    const socket = new WebSocket(wsUrl);
+
+    // Show loader immediately
     $('.overlay_d').show();
-  }); 
+
+    socket.onopen = function() {
+        console.log("WebSocket connected");
+        
+        // Submit form after connection is established
+        const formData = new FormData(form);
+        formData.append('task_id', taskId);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        }).catch(error => {
+            console.error('Form submission error:', error);
+        });
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        $('#a-progress-percent').text(data.progress);
+        $('#a-progress-message').text(data.message || '');
+        $('#a-progress-bar').css('width', data.progress + '%');
+        
+        if (data.progress === 100 && data.message === "Processing complete for image") { 
+            setTimeout(() => {
+                window.location.href = "{% url 'image_display' %}";
+            }, 1000);
+        }
+    };
+
+    socket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        // Fallback to regular form submission if WS fails
+        form.submit();
+    };
+
+    socket.onclose = function(e) {
+        if (e.code !== 1000) {
+            console.log('WebSocket closed unexpectedly');
+        }
+    };
+});
 
 
  // Typing Effect

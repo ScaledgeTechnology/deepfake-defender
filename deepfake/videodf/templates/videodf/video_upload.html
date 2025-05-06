@@ -485,33 +485,23 @@
             50% { transform: scale(1.2); } /* Zoom in slightly */
         }
         
-           /* Text below container */
-        .analyzing-text {
-            margin-top: 10px; 
-            font-size: 1rem; 
-            font-weight: bold;
-            text-align: center;
-            color: #aeb9be;
-            white-space: nowrap; 
-            overflow: hidden; 
-            width: 0; 
-            animation: wait-type 3s infinite; 
-        }
-        
-        /* Typing effect animation */
-        
-        
-        @keyframes wait-type {
-                0% {
-                    width: 0;
-                }
-                99% {
-                    width: 100%;
-                }
-                100% {
-                    width: 0; 
-                }
-            }
+        .a-progress-bar-container {
+          width: 100%;
+          background-color: #f0f0f0;
+          border-radius: 5px;
+          margin-top: 10px;
+      }
+      .a-progress-bar {
+          height: 10px;
+          background-color: #4CAF50;
+          border-radius: 5px;
+          transition: width 0.3s;
+      }
+      .a-progress-message {
+          margin-top: 5px;
+          font-size: 0.9em;
+          color: #666;
+      }
 
 
 
@@ -786,6 +776,8 @@ border: 1px solid rgba(5, 177, 57, 0.19);
         </div>
       </div>
 
+
+
 <!-- Submitting loader -->
 <div class="overlay_d">
     <div id="loader_d" class="loader_d text-center">
@@ -816,9 +808,14 @@ border: 1px solid rgba(5, 177, 57, 0.19);
       </div>
   
       <!-- Analyzing Text -->
-      <div class="analyzing-text">
-        Analyzing your video . . .
-      </div>
+      <div class="analyzing-text-video">
+        Analyzing your Video: <span id="a-progress-percent">0</span>%
+    </div>
+    <div id="a-progress-message" class="a-progress-message">Starting analysis...</div>
+    <div class="a-progress-bar-container">
+        <div id="a-progress-bar" class="a-progress-bar" style="width: 0%"></div>
+    </div>
+
     </div>
   </div>
 
@@ -999,7 +996,61 @@ border: 1px solid rgba(5, 177, 57, 0.19);
                     annotationsContainer.append(annotationLine);
                 }
             }
+
+            function formatSmartTime(seconds) {
+              let totalMillis = Math.round(seconds * 1000);
+              let sec = Math.floor(totalMillis / 1000) % 60;
+              let min = Math.floor(totalMillis / 60000) % 60;
+              let hr = Math.floor(totalMillis / 3600000);
+              let millis = totalMillis % 1000;
+          
+              // Custom rollover: if millis >= 600, round up the next second/min/hr
+              if (millis >= 600) {
+                  millis = 0;
+                  sec += 1;
+                  if (sec >= 60) {
+                      sec = 0;
+                      min += 1;
+                      if (min >= 60) {
+                          min = 0;
+                          hr += 1;
+                      }
+                  }
+              }
+          
+              let formatted = '';
+              if (hr > 0) {
+                  formatted += `${hr}.${(min * 60 + sec)}.${millis.toString().padStart(3, '0')}`;
+              } else if (min > 0) {
+                  formatted += `${min}.${sec}.${millis.toString().padStart(3, '0')}`;
+              } else {
+                  formatted += `${sec}.${millis.toString().padStart(3, '0')}`;
+              }
+          
+              return formatted + 's';
+          }
+          function updateTimeDisplay() {
+            const durationLeft = endTime - startTime;
         
+            $('#start-time').text(`Start Time: ${formatSmartTime(startTime)}`);
+            $('#end-time').text(`End Time: ${formatSmartTime(endTime)}`);
+            $('#duration').text(`Duration: ${formatSmartTime(durationLeft)}`);
+        }
+        function updateProgressBar() {
+          const clampedCurrentTime = Math.max(startTime, Math.min(videoElement.currentTime, endTime));
+          let progress = ((clampedCurrentTime - startTime) / (endTime - startTime)) * 100;
+      
+          $('#progress-bar').css('width', `${Math.max(0, progress)}%`);
+      
+          const currentTime = clampedCurrentTime - startTime;
+          const totalTime = endTime - startTime;
+      
+          $('#progress-time').text(`${formatSmartTime(currentTime)} / ${formatSmartTime(totalTime)}`);
+      }
+                        
+
+
+/*
             // Update time display
             function updateTimeDisplay() {
                 const durationLeft = endTime - startTime;
@@ -1008,6 +1059,8 @@ border: 1px solid rgba(5, 177, 57, 0.19);
                 $('#duration').text(`Duration: ${(durationLeft / 100).toFixed(3)}s`);
             }
         
+      
+            
             // Update progress bar
             function updateProgressBar() {
                 // Clamp the videoElement.currentTime within the valid range
@@ -1024,7 +1077,7 @@ border: 1px solid rgba(5, 177, 57, 0.19);
                 // Display the progress time
                 $('#progress-time').text(`${currentTime} / ${totalTime}`);
             }
-            
+ */           
             
         
             // Update playback line position
@@ -1337,9 +1390,69 @@ border: 1px solid rgba(5, 177, 57, 0.19);
             });
 
  // submit
- $("form").on("submit", function (e) {
-    $('.overlay_d').show();
-  });
+ // $("form").on("submit", function (e) {
+ //    $('.overlay_d').show();
+ // });
+ $("form").on("submit", function(e) {
+  e.preventDefault();
+  const form = this;
+  const taskId = Date.now().toString();
+  
+  // Get the correct WebSocket URL
+  //const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  //const wsUrl = wsProtocol + window.location.host + '/ws/audio_progress/' + taskId + '/';
+  
+  const wsUrl = `ws://${window.location.host}/ws/progress/video/${taskId}/`;
+  
+  const socket = new WebSocket(wsUrl);
+
+  // Show loader immediately
+  $('.overlay_d').show();
+
+  socket.onopen = function() {
+      console.log("WebSocket connected");
+      
+      // Submit form after connection is established
+      const formData = new FormData(form);
+      formData.append('task_id', taskId);
+      
+      fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+          },
+      }).catch(error => {
+          console.error('Form submission error:', error);
+      });
+  };
+
+  socket.onmessage = function(e) {
+      const data = JSON.parse(e.data);
+      $('#a-progress-percent').text(data.progress);
+      $('#a-progress-message').text(data.message || '');
+      $('#a-progress-bar').css('width', data.progress + '%');
+      
+      //if (data.progress === 100) {
+      if (data.progress === 100 && data.message === "Processing complete for video") {  
+          setTimeout(() => {
+              window.location.href = "{% url 'video_display' %}";
+          }, 1000);
+      }
+  };
+
+  socket.onerror = function(error) {
+      console.error('WebSocket error:', error);
+      // Fallback to regular form submission if WS fails
+      form.submit();
+  };
+
+  socket.onclose = function(e) {
+      if (e.code !== 1000) {
+          console.log('WebSocket closed unexpectedly');
+      }
+  };
+});
 
 
     // Typing Effect

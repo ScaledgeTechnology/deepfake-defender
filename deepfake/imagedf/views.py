@@ -1,4 +1,5 @@
 # from django.http import HttpResponse
+import uuid
 from django.shortcuts import render
 
 import os
@@ -77,8 +78,10 @@ def image_upload(request):
 
         # ✅ **TRY calling the predict function and handle errors** - If face not found
         try:
+            task_id = request.POST.get('task_id', str(uuid.uuid4()))
+
             # all_confidence_list = predict(save_path, mtcnn, model_face, model_audio)
-            all_confidence_list = predict(input_path = save_path, mtcnn = mtcnn, model_face=model_face, model_audio =model_audio, fake_frames=True)
+            all_confidence_list = predict(input_path = save_path, mtcnn = mtcnn, model_face=model_face, model_audio =model_audio, fake_frames=True, task_id=task_id)
             if all_confidence_list is None:
                 raise ValueError("Predict function returned None")
             

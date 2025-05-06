@@ -9,6 +9,9 @@ import urllib.parse
 
 from common.deepfake_logic import load_models,predict
 # from common.old_logic_deepfake import load_models,predict
+import uuid
+
+from django.http import JsonResponse
 
 
 # -------------------- All Paths -------------------- 
@@ -43,11 +46,15 @@ def audio_upload(request):
     if request.method == "POST" and request.FILES.get("audio_file"):
 
         # Clear all files in the video_predict directory
-        video_predict_path = os.path.join(settings.BASE_DIR, "uploaded_files/audio_predict/")
-        clear_directory_files(video_predict_path)
+        audio_predict_path = os.path.join(settings.BASE_DIR, "uploaded_files/audio_predict/")
+        clear_directory_files(audio_predict_path)
 
          # Clear all session data at the start
-        request.session.flush()
+        request.session.flush()          # comment just to check progress
+
+        # ✔️ just clear the *data* but keep the same session ID and cookie
+        # request.session.clear()
+
 
         audio_file = request.FILES["audio_file"]
 
@@ -68,9 +75,15 @@ def audio_upload(request):
                 destination.write(chunk)
         print(f"Audio file '{sanitized_filename}' saved successfully.")
 
+
         # Put inside try block - so if any error occurs then it shows error page
         try:
-            real_confidence, fake_confidence, graph_generated  = predict(save_path, mtcnn, model_face, model_audio, predict_audio_flag=True, graph_path=AUDIO_GRAPH_LOCATION )
+            # ---------------------------
+            # Get task_id from POST data or generate new
+            task_id = request.POST.get('task_id', str(uuid.uuid4()))
+            # ---------------------------
+
+            real_confidence, fake_confidence, graph_generated  = predict(save_path, mtcnn, model_face, model_audio, predict_audio_flag=True, graph_path=AUDIO_GRAPH_LOCATION, task_id=task_id )
 
             if graph_generated:
                 request.session['graph_path'] = f"{settings.MEDIA_URL}audio_predict/graph/audio_graph.png"
@@ -89,6 +102,7 @@ def audio_upload(request):
             return redirect("error_page")  # Redirect if prediction fails
 
     return render(request, "audiodf/audio_upload.html")
+
 
 
 def audio_display(request):

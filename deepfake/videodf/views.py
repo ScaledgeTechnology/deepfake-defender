@@ -15,30 +15,32 @@ from common.deepfake_logic import load_models,predict
 
 # from common.old_logic_deepfake import load_models,predict
 
+# from common.progress import send_progress_update
+import uuid
+
 # ---------------------- all paths --------------------------
 # VIDEO_UPLOAD_PATH = os.path.join(settings.BASE_DIR, "video_predict/video/")  # x
 VIDEO_UPLOAD_PATH = os.path.join(settings.BASE_DIR, "uploaded_files/video_predict/video/") 
 
 
-VIDEO_GRAPH_LOCATION = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/graph/audio_graph.png')
+VIDEO_GRAPH_LOCATION = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/graph/audio_graph.png') 
 
 # Define the file paths
-output_audio_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_audio_video.mp4')
-output_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_video.mp4')
+output_audio_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_audio_video.mp4') 
+output_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/output_video.mp4') 
 
-# output_grad_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/grad_video.mp4')
+# output_grad_video_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/video/grad_video.mp4') 
 
 
-# Define paths for uploaded and trimmed videos
-TRIMMED_VIDEO_PATH = os.path.join(settings.MEDIA_ROOT, "video_predict/video/trimmed/")
+# Define paths for uploaded and trimmed videos 
+TRIMMED_VIDEO_PATH = os.path.join(settings.MEDIA_ROOT, "video_predict/video/trimmed/") 
 
 # -------------------- Load Models --------------------
-mtcnn, model_face, model_audio = load_models()
+mtcnn, model_face, model_audio = load_models() 
 
 # -------------------- Functions --------------------
 
 # clear all files in the main directory(uploaded_files) and all the files in the subdirectories
-import os
 
 def clear_directory_files(directory_path):
     """
@@ -87,11 +89,14 @@ def video_upload(request):
 
         # Put inside try block - so if any error occurs then it shows error page
         try:
+            # Get task_id from POST data or generate new
+            task_id = request.POST.get('task_id', str(uuid.uuid4()))
+
             graph_generated = False  # <- Ensure it's always defined
             
             # Call the predict function with the appropriate flag
             if predict_audio_flag:
-                real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence, graph_generated  = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION)
+                real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence, graph_generated  = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION,task_id=task_id)
                 # User can pass audio_batch_size and video_batch_size as per their system memory
                 # real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, predict_audio_flag=True, fake_frames=True, graph_path=VIDEO_GRAPH_LOCATION, audio_batch_size=64, video_batch_size=64)
 
@@ -103,7 +108,7 @@ def video_upload(request):
                     request.session['real_audio_confidence'] = f"{real_audio_confidence:.2f}%" 
                     request.session['fake_audio_confidence'] = f"{fake_audio_confidence:.2f}%"
             else:
-                real_avg_video, fake_avg_video = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, fake_frames=True)
+                real_avg_video, fake_avg_video = predict(input_path=save_path, mtcnn=mtcnn, model_face=model_face, model_audio=model_audio, fake_frames=True, task_id=task_id)
                 # optional
                 request.session['graph_path'] = None  # No audio graph
             
@@ -244,6 +249,3 @@ def trim_video(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
-
-

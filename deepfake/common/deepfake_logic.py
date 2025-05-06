@@ -13,6 +13,7 @@ from tqdm import tqdm, trange
 
 from IPython.display import Video
 from math import ceil
+from itertools import zip_longest
 
 import numpy as np
 import seaborn as sns
@@ -44,12 +45,15 @@ from moviepy.editor import VideoFileClip
 from typing import Optional, Union, Dict
 from scipy.interpolate import make_interp_spline
 from matplotlib.collections import LineCollection
+
 from huggingface_hub import hf_hub_download
 
 
 #  Django imports
 from django.conf import settings
 
+# ---------------------For progressbar---------------------------
+from common.progress import send_progress_update
 
 # -------------------- All Paths --------------------
 # ---------- Models path -------------
@@ -208,7 +212,6 @@ class AudioClassifier(nn.Module):
 
 # -------------------- Load the models --------------------
 
-
 def load_models():
     DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     mtcnn = MTCNN(
@@ -237,16 +240,54 @@ def load_models():
     # Number of classes for classification (e.g., 2 for binary classification)
     num_classes = 2
     model_audio = AudioClassifier(dims=dims,num_classes=num_classes)
-    checkpoint = torch.load(audio_model_location, map_location=torch.device('cpu'))
-    # model_audio.load_state_dict(checkpoint)   # For new model
-    model_audio.load_state_dict(checkpoint['model'].state_dict())  
+    checkpoint = torch.load(audio_model_location, map_location=torch.device('cpu'), weights_only=False)
+    model_audio.load_state_dict(checkpoint['model'].state_dict())
     model_audio.to(DEVICE)
 
-    checkpoint = torch.load(video_model_location, map_location=torch.device('cpu'))
+    checkpoint = torch.load(video_model_location, map_location=torch.device('cpu'), weights_only=False)
     model_face.load_state_dict(checkpoint['model_state_dict'])
     model_face.to(DEVICE)
 
     return mtcnn, model_face, model_audio
+
+# def load_models():
+#     DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+#     mtcnn = MTCNN(
+#         select_largest=False,
+#         post_process=False,
+#         selection_method='probability',
+#         keep_all=True,
+#         device=DEVICE
+#     ).to(DEVICE)
+
+#     model_face = InceptionResnetV1(
+#         pretrained="vggface2",
+#         classify=True,
+#         num_classes=1,
+#         device=DEVICE
+#     )
+
+#     dims = ModelDimensions(
+#         n_mels=80,          # Number of Mel-frequency filter banks
+#         n_audio_ctx=500//2,   # Audio context (length of positional embedding)
+#         n_audio_state=512,  # Model dimension size
+#         n_audio_head=8,     # Number of attention heads
+#         n_audio_layer=6     # Number of attention layers
+#     )
+
+#     # Number of classes for classification (e.g., 2 for binary classification)
+#     num_classes = 2
+#     model_audio = AudioClassifier(dims=dims,num_classes=num_classes)
+#     checkpoint = torch.load(audio_model_location, map_location=torch.device('cpu'))
+#     # model_audio.load_state_dict(checkpoint)   # For new model
+#     model_audio.load_state_dict(checkpoint['model'].state_dict())  
+#     model_audio.to(DEVICE)
+
+#     checkpoint = torch.load(video_model_location, map_location=torch.device('cpu'))
+#     model_face.load_state_dict(checkpoint['model_state_dict'])
+#     model_face.to(DEVICE)
+
+#     return mtcnn, model_face, model_audio
 
 # -------------------------------------
 
@@ -264,7 +305,6 @@ HOP_LENGTH = 160
 CHUNK_LENGTH = 5
 N_SAMPLES = CHUNK_LENGTH * SAMPLE_RATE  # 80000 samples in a 5-second chunk
 N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  # 500 frames in a mel spectrogram input
-
 
 
 def load_audio(file: str, sr: int = 16000, duration: int = None):
@@ -324,7 +364,7 @@ def load_audio(file: str, sr: int = 16000, duration: int = None):
         print(f"Failed to load audio: {str(e)}")
         print("Real audio: N/A, Fake audio: N/A")
         return np.array([])  # Return empty array on failure (this handle for silent audio)
-
+# -------------------------------------------------------------------------------------------------------------------
 
 
 def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
@@ -332,26 +372,26 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
     Pad or trim the audio array to N_SAMPLES, as expected by the encoder.
     """
     if torch.is_tensor(array):
-        if array.shape[axis] > length:
-            array = array.index_select(
-                dim=axis, index=torch.arange(length, device=array.device)
-            )
+      if array.shape[axis] > length:
+          array = array.index_select(
+              dim=axis, index=torch.arange(length, device=array.device)
+          )
 
-        if array.shape[axis] < length:
-            pad_widths = [(0, 0)] * array.ndim
-            pad_widths[axis] = (0, length - array.shape[axis])
-            array = F.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
+      if array.shape[axis] < length:
+          pad_widths = [(0, 0)] * array.ndim
+          pad_widths[axis] = (0, length - array.shape[axis])
+          array = F.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
 
     else:  # Handle NumPy arrays
-        if array.shape[axis] > length:
-            array = array.take(indices=range(length), axis=axis)
+      if array.shape[axis] > length:
+          array = array.take(indices=range(length), axis=axis)
 
-        if array.shape[axis] < length:
-            pad_widths = [(0, 0)] * array.ndim
-            pad_widths[axis] = (0, length - array.shape[axis])
+      if array.shape[axis] < length:
+          pad_widths = [(0, 0)] * array.ndim
+          pad_widths[axis] = (0, length - array.shape[axis])
 
-            # Flatten the pad widths to match PyTorch's F.pad format
-            array = np.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
+          # Flatten the pad widths to match PyTorch's F.pad format
+          array = np.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
 
     return array
 
@@ -584,38 +624,39 @@ def compiling_output_video(frames, boxes_batch, confidences_list, fps, total_fra
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         try:
           shift = 5
-          for i, (box, confidence) in enumerate(zip(boxes, confidences)):
-              x1, y1, x2, y2 = map(int, box)
+          if boxes is not None:
+            for i, (box, confidence) in enumerate(zip(boxes, confidences)):
+                x1, y1, x2, y2 = map(int, box)
 
-              real = float(confidence['real'])
-              fake = float(confidence['fake'])
-              label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
-              label_size = (x2 - x1) * 0.01
-              higher = int((y2 - y1) * 0.1)
-              label_box_y = y2 + higher
-              if confidence['real'] > 55:
-                  box_colour = (0, 255, 0)
-              else:
-                  box_colour = (0, 0, 255)
+                real = float(confidence['real'])
+                fake = float(confidence['fake'])
+                label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
+                label_size = (x2 - x1) * 0.01
+                higher = int((y2 - y1) * 0.1)
+                label_box_y = y2 + higher
+                if confidence['real'] > 55:
+                    box_colour = (0, 255, 0)
+                else:
+                    box_colour = (0, 0, 255)
 
-              # Draw the rectangle for face
-              cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
+                # Draw the rectangle for face
+                cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
 
-              # Thickness and Scale
-              font_scale = 0.0008 * max(frame_width, frame_height)
-              thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+                # Thickness and Scale
+                font_scale = 0.0008 * max(frame_width, frame_height)
+                thickness = max(1, int(0.002 * max(frame_width, frame_height)))
 
-              # Face value
-              cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-              cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+                # Face value
+                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
 
-              # Draw label text
-              text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-              _, text_height = text_size
-              cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-              cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+                # Draw label text
+                text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                _, text_height = text_size
+                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
-              shift += (text_height + 10)
+                shift += (text_height + 10)
 
           # Draw audio prediction text
           if len(audio_interpolated):
@@ -623,7 +664,6 @@ def compiling_output_video(frames, boxes_batch, confidences_list, fps, total_fra
               audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
               cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
               cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
           out.write(frame)
 
         except Exception as e:
@@ -645,6 +685,7 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
         shift = 5
 
         try:
+          if boxes is not None:
             for i, (box, confidence, mask_frame) in enumerate(zip(boxes, confidences, mask_frames)):
                 x1, y1, x2, y2 = map(int, box)
 
@@ -659,14 +700,14 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
                     box_colour = (0, 255, 0)
                 else:
                     box_colour = (0, 0, 255)
-                    # Overlay the fake mask
-                    resized_mask = cv2.resize(mask_frame, (x2 - x1, y2 - y1))
-    
-                    resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)  #
-                    # resized_mask_bgr = cv2.cvtColor(np.array(resized_mask), cv2.COLOR_RGB2BGR)  #    
-    
-                    frame[y1:y2, x1:x2] = resized_mask_bgr
+                    crop = frame[y1:y2, x1:x2]
+                    h, w = crop.shape[:2]  # Get actual slice height and width
 
+                    resized_mask = cv2.resize(mask_frame, (w, h))  # Resize mask to match cropped region
+
+                    resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
+
+                    frame[y1:y2, x1:x2] = resized_mask_bgr
 
                 # Draw bounding box
                 cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
@@ -686,14 +727,14 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
 
                 shift += (text_height + 10)
 
-            # Audio text (optional)
-            if len(audio_interpolated):
-                real_audio, fake_audio = audio_interpolated[idx]
-                audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
-                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
-                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+          # Audio text (optional)
+          if len(audio_interpolated):
+              real_audio, fake_audio = audio_interpolated[idx]
+              audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
+              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
+              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-            out.write(frame)
+          out.write(frame)
 
         except Exception as e:
             print(f"Error processing frame {idx + 1}: {e}")
@@ -706,7 +747,6 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
     video_clip.close()
 
 # -------------------------------------------------------------------------------------------------------------------
-
 def compiling_image(images: list, boxes, confidences):
     print(images)
     save_path = annotated_image_save_location  # Set the save path for the image
@@ -939,10 +979,17 @@ def visualize_audio_predictions_waveform(predictions, save_graph_path, sample_ra
 # -------------------- Predictors --------------------
 
 # Predict deep-fake on the audio file by dividing it into 3-second segments
-def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_rate=16000, stride_seconds=1, duration=None):
+def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_rate=16000, stride_seconds=1, duration=None,task_id=None):
+# def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_rate=16000, stride_seconds=1, duration=None):
     """
     Predict whether the audio is real or fake.
     """
+# ---------------------For progressbar---------------------------
+    if task_id:
+        send_progress_update('audio', task_id, 0, "Loading audio file...")
+# ----------------------------------------------------------------
+
+
     print(f"Predicting for Audio...\n{audio_path}")
 
    # Load the audio file
@@ -953,7 +1000,8 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
 
     # If the audio is silent, return N/A
     if audio_data.size == 0:
-        return [0.0, 0.0], []  # Return 0% confidence for both real and fake
+        # return [0.0, 0.0], []  # Return 0% confidence for both real and fake
+        return [0.0, 0.0], [], False  # Return3 values for silent audio - else sometime it gives NoneType error
     # -----------------------------------------
 
     model_audio.eval()
@@ -961,7 +1009,7 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     audio_chunks = split_audio(audio_data, stride_seconds, sample_rate=sample_rate)
     mel_specs = []
 
-    # Process each chunk
+    # # Process each chunk
     for chunk in audio_chunks:
         mel_spec = log_mel_spectrogram(chunk, n_mels=80, padding=N_SAMPLES, device=next(model_audio.parameters()).device)
         mel_spec = mel_spec.unsqueeze(0)  # Add batch dimension (1, n_mels, n_frames)
@@ -970,23 +1018,32 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
 
     mel_specs = torch.cat(mel_specs, dim=0)
 
+
     # Define batch size
     num_batches = ceil(len(mel_specs) / batch_size)
     # print(len(audio_chunks), num_batches)
 
     predictions = []
 
+    # for i in range(num_batches):
     for i in trange(num_batches):
+
+# ---------------------For progressbar---------------------------
+        progress = int(10 + (i / num_batches) * 80)
+        if task_id:
+            send_progress_update('audio', task_id, progress, 
+                              f"Processing your audio...")
+# ----------------------------------------------------------------
+
         batch = mel_specs[i * batch_size : (i + 1) * batch_size]
         with torch.no_grad():
             logits = model_audio(batch)
             # print(f"Batch {i+1} Predictions: {batch_predictions}")
         # Apply softmax to get probabilities
-        batch_predictions = F.softmax(logits, dim=1)            #
+        batch_predictions = F.softmax(logits, dim=1)            
         predictions.extend(batch_predictions.cpu().tolist())
 
     # Post-process predictions
-    # audio_predictions = np.max(predictions, axis=1)  # Extract maximum probability for each segment
     predictions = np.array(predictions)
     # print(predictions)
 
@@ -996,12 +1053,25 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
         graph_path = None  # Indicate that no graph was generated
 
     audio_prediction = np.mean(predictions, axis=0)
+
+# ---------------------For progressbar---------------------------
+    if task_id:
+        send_progress_update('audio', task_id, 100, "Audio analysis complete")
+# ----------------------------------------------------------------
+
     # return audio_prediction
     return audio_prediction, predictions, graph_generated
 
 ### ---------------------------------------------------------------------------------------------- 
 
-def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, grad: bool = False):
+def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, grad: bool = False, task_id=None, is_video=True):
+
+# ---------------------For progressbar---------------------------  
+    if task_id:
+        media_type = "video" if is_video else "image"
+        send_progress_update(media_type, task_id, 10, f"Starting {media_type} analysis")
+# ----------------------------------------------------------------   
+
     # Define batch size
     model_face.eval()
     device = next(model_face.parameters()).device  # Get the device of the model
@@ -1018,78 +1088,127 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
 
     # Process each batch
     for i in trange(num_batches):
+
+# ---------------------For progressbar---------------------------
+        progress = int(10 + (i / num_batches) * 80)
+        if task_id:
+            media_type = "video" if is_video else "image"
+            # showing batch size
+            # send_progress_update(media_type, task_id, progress,
+            #                   f"Processing {media_type} batch {i+1}/{num_batches}")
+            # Not showing batch size
+            send_progress_update(media_type, task_id, progress,
+                              f"Processing your {media_type}...")
+# ----------------------------------------------------------------           
+
         # Extract the current batch of images
         batch = input_images[i * batch_size : (i + 1) * batch_size]
         # Detect faces in the current batch
         boxes, probs = mtcnn.detect(batch)  # Perform detection on the current batch
+
+        #print(probs, type(probs))
         try:
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         except:
             pass
 
+        valid_faces, none_indices = [], []
+        confidences, visualizations = [], []
         # Save batches
         batch_boxes.extend(boxes)
+        # print(boxes)
 
         # Extract faces from the batch
         batch_faces = mtcnn.extract(batch, boxes, None)  # Extract faces from the detected boxes
+        # print(batch_faces)
 
-        # Convert the list of faces to a tensor
-        batch_faces =  torch.cat(batch_faces, dim=0).to(torch.float32).to(device) / 255.0  # Normalize faces to [0, 1]
-        batch_faces = F.interpolate(batch_faces, size=(256, 256), mode='bilinear', align_corners=False)  # Resize faces
-        print(next(model_face.parameters()).device)
-        print(batch_faces.device)
+        for idx, face in enumerate(batch_faces):
+          if face is not None:
+            valid_faces.append(face)
+          else:
+            none_indices.append(idx)
+        if batch_faces:
+          batch_faces = valid_faces
 
-        # Perform batch prediction
-        with torch.no_grad():
-            outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
-            real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
-            fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
-            print(torch.is_grad_enabled())
-            print(real_predictions)
+          # Convert the list of faces to a tensor
+          batch_faces =  torch.cat(batch_faces, dim=0).to(torch.float32).to(device) / 255.0  # Normalize faces to [0, 1]
+          batch_faces = F.interpolate(batch_faces, size=(256, 256), mode='bilinear', align_corners=False)  # Resize faces
+          print(next(model_face.parameters()).device)
+          print(batch_faces.device)
 
-        # Process each face in the batch
-        confidences, visualizations = [], []
-        for j, face in enumerate(batch_faces):
-            # Generate Grad-CAM visualization if enabled
-            if grad:
-                prev_face = face.permute(1, 2, 0).cpu().numpy() * 255  # Convert to image format
-                prev_face = prev_face.astype('uint8')
-                face_image_to_plot = prev_face.copy()
-                targets = [ClassifierOutputTarget(0)]
-                grayscale_cam = cam(input_tensor=face.unsqueeze(0), targets=targets, eigen_smooth=True)
-                grayscale_cam = grayscale_cam[0]  # Select Grad-CAM for the current face
-                visualization = show_cam_on_image(face_image_to_plot / 255.0, grayscale_cam, use_rgb=True)
-                face_with_mask = cv2.addWeighted(prev_face, 1, visualization, 0.5, 0)
-                visualizations.append(face_with_mask)
+          # Perform batch prediction
+          with torch.no_grad():
+              outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
+              real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
+              fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
+              print(torch.is_grad_enabled())
 
-            # Save confidences
-            confidence = {
-                'real': real_predictions[j] * 100,
-                'fake': fake_predictions[j] * 100
-            }
-            confidences.append(confidence)
-        # print(len(confidences))
-        print(len(visualizations))
-        iterator = iter(confidences)
-        confidences = [[next(iterator) for _ in sublist] for sublist in probs]
+          # Process each face in the batch
+          for j, face in enumerate(batch_faces):
+              # Generate Grad-CAM visualization if enabled
+              if grad:
+                  prev_face = face.permute(1, 2, 0).cpu().numpy() * 255  # Convert to image format
+                  prev_face = prev_face.astype('uint8')
+                  face_image_to_plot = prev_face.copy()
+                  targets = [ClassifierOutputTarget(0)]
+                  grayscale_cam = cam(input_tensor=face.unsqueeze(0), targets=targets, eigen_smooth=True)
+                  grayscale_cam = grayscale_cam[0]  # Select Grad-CAM for the current face
+                  visualization = show_cam_on_image(face_image_to_plot / 255.0, grayscale_cam, use_rgb=True)
+                  face_with_mask = cv2.addWeighted(prev_face, 1, visualization, 0.5, 0)
+                  visualizations.append(face_with_mask)
 
-        iterator = iter(visualizations)
-        visualizations = [[next(iterator) for _ in sublist] for sublist in probs]
+              # Save confidences
+              confidence = {
+                  'real': real_predictions[j] * 100,
+                  'fake': fake_predictions[j] * 100
+              }
+              confidences.append(confidence)
+          print(len(confidences))
+          print(len(visualizations))
 
-        confidences_list.extend(confidences)
-        visualizations_list.extend(visualizations)
+          probs = probs.tolist()
+          for idx in sorted(none_indices, reverse=True):
+            probs.pop(idx)
+
+          iterator = iter(confidences)
+          confidences = [[next(iterator) for _ in sublist] for sublist in probs]
+
+          iterator = iter(visualizations)
+          visualizations = [[next(iterator) for _ in sublist] for sublist in probs]
+
+          for idx in none_indices:
+            confidences.insert(idx, [{'real': 0, 'fake': 0}])
+            visualizations.insert(idx, None)
+
+          confidences_list.extend(confidences)
+          visualizations_list.extend(visualizations)
+
+        else:
+          confidences_list.extend(confidences)
+          visualizations_list.extend(visualizations)
 
     try:
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     except:
         pass
-    # print(confidences_list)
+
+# ---------------------For progressbar---------------------------
+    # if task_id:
+    #     send_progress_update('video', task_id, 100, "Video analysis complete")
+    if task_id:
+        media_type = "video" if is_video else "image"
+        completion_progress = 80 if is_video else 90  # Images complete faster
+        send_progress_update(media_type, task_id, completion_progress, 
+                           f"{media_type.capitalize()} analysis complete")
+# ----------------------------------------------------------------
+
+
     return batch_boxes, confidences_list, visualizations_list
 
-
-# -------------------- Store Real and Fake frames inside a folder with labling --------------------
+# --------------------------- saving only fake Grad-CAM frames ---------------------------
+# Store real and fake frames (Not storing every frames- storing every 3rd frame in a sequence of consecutive frames)
 
 def process_and_save_frames(frames, confidences, batch_boxes):
     # Initialize counters and font
@@ -1101,61 +1220,80 @@ def process_and_save_frames(frames, confidences, batch_boxes):
     interval = 3  # Store every 3rd frame in a sequence of consecutive frames
 
     for i, (frame, confidence, boxes) in enumerate(zip(frames, confidences, batch_boxes)):
+        # Skip frames with no detected faces
+        if boxes is None or confidence is None:
+            continue
+
         # Convert frame to PIL Image if it's a numpy array
         frame = Image.fromarray(frame) if isinstance(frame, np.ndarray) else frame
+
         for j, (box, conf) in enumerate(zip(boxes, confidence)):
+            if box is None or conf is None:
+                continue  # Skip invalid entries
 
             # Determine label and directory based on confidence
             label = "Real" if conf['real'] > conf['fake'] else "Fake"
             save_dir = real_frames_dir if label == "Real" else fake_frames_dir
+
             # Count consecutive frames with the same label
             consecutive_count = consecutive_count + 1 if label == previous_label else 1
 
             # Store only the first and last frame of each sequence of consecutive frames
             if consecutive_count == 1 or consecutive_count % interval == 0:
-              # Crop face, resize, and annotate with confidence text
-              x1, y1, x2, y2 = map(int, box)
-              cropped_face = frame.crop((x1, y1, x2, y2)).resize((256, 256))
+                try:
+                    x1, y1, x2, y2 = map(int, box)
+                    cropped_face = frame.crop((x1, y1, x2, y2)).resize((256, 256))
 
-              # Create image with space for text
-              new_height = cropped_face.height + 30
-              annotated_image = Image.new("RGB", (cropped_face.width, new_height), color=(255, 255, 255))
-              annotated_image.paste(cropped_face, (0, 0))
+                    # Create image with space for text
+                    new_height = cropped_face.height + 30
+                    annotated_image = Image.new("RGB", (cropped_face.width, new_height), color=(255, 255, 255))
+                    annotated_image.paste(cropped_face, (0, 0))
 
-              # Add confidence text
-              draw = ImageDraw.Draw(annotated_image)
-              text = f"{label} {int(conf[label.lower()])}%"
-              text_bbox = draw.textbbox((0, 0), text, font=font)
-              text_x = (cropped_face.width - (text_bbox[2] - text_bbox[0])) // 2
-              text_y = cropped_face.height + (30 - (text_bbox[3] - text_bbox[1])) // 2
-              draw.text((text_x, text_y), text, fill="black", font=font)
+                    # Add confidence text
+                    draw = ImageDraw.Draw(annotated_image)
+                    text = f"{label} {int(conf[label.lower()])}%"
+                    text_bbox = draw.textbbox((0, 0), text, font=font)
+                    text_x = (cropped_face.width - (text_bbox[2] - text_bbox[0])) // 2
+                    text_y = cropped_face.height + (30 - (text_bbox[3] - text_bbox[1])) // 2
+                    draw.text((text_x, text_y), text, fill="black", font=font)
 
-              # Save the annotated image
-              if label == "Real":
-                  real_frame_count += 1
-                  frame_name = f"real_frame{real_frame_count}.jpg"
-              else:
-                  fake_frame_count += 1
-                  frame_name = f"fake_frame{fake_frame_count}.jpg"
+                    # Save the annotated image
+                    if label == "Real":
+                        real_frame_count += 1
+                        frame_name = f"real_frame{real_frame_count}.jpg"
+                    else:
+                        fake_frame_count += 1
+                        frame_name = f"fake_frame{fake_frame_count}.jpg"
 
-              frame_path = os.path.join(save_dir, frame_name)
-              annotated_image.save(frame_path, format="JPEG")
-            #   print(f"Saved {label} face {j + 1} of frame {i + 1} to {frame_path}")
+                    frame_path = os.path.join(save_dir, frame_name)
+                    annotated_image.save(frame_path, format="JPEG")
+                    # print(f"Saved {label} face {j + 1} of frame {i + 1} to {frame_path}")
+
+                except Exception as e:
+                    print(f"Error processing face {j+1} in frame {i+1}: {e}")
 
         previous_label = label  # Update previous label
+
+
 
 # --------------------------- saving only fake Grad-CAM frames ---------------------------
 def process_and_save_gradcam_full_frames(frames, confidences, boxes_list, gradcam_visualizations):
     font = ImageFont.load_default()
-    fake_frame_count = 0  # Only tracking fake frames now
+    fake_frame_count = 0  # Only tracking fake frames
 
     for i, (frame, confidence_set, boxes, gradcam_set) in enumerate(zip(frames, confidences, boxes_list, gradcam_visualizations)):
+        if boxes is None or gradcam_set is None:
+            continue  # Skip frames without valid detections or visualizations
+
         frame_np = frame if isinstance(frame, np.ndarray) else np.array(frame)
         base_frame = frame_np.copy()
 
         for j, (confidence, box, gradcam_face) in enumerate(zip(confidence_set, boxes, gradcam_set)):
+            if box is None or gradcam_face is None:
+                continue  # Skip invalid face data
+
             label = "Real" if confidence['real'] > confidence['fake'] else "Fake"
-            
+
             # Only process and save if label is Fake
             if label != "Fake":
                 continue
@@ -1177,12 +1315,10 @@ def process_and_save_gradcam_full_frames(frames, confidences, boxes_list, gradca
             try:
                 gradcam_face_resized = cv2.resize(gradcam_face, (x2 - x1, y2 - y1))
             except Exception as e:
-                # print(f"Resize failed on frame {i+1}, face {j+1}: {e}")
-                continue
+                continue  # Skip resizing failures
 
             if gradcam_face_resized.shape != (y2 - y1, x2 - x1, 3):
-                # print(f"Shape mismatch: {gradcam_face_resized.shape} vs {(y2 - y1, x2 - x1, 3)}")
-                continue
+                continue  # Skip shape mismatches
 
             full_frame_with_gradcam = base_frame.copy()
             full_frame_with_gradcam[y1:y2, x1:x2] = gradcam_face_resized
@@ -1207,20 +1343,26 @@ def process_and_save_gradcam_full_frames(frames, confidences, boxes_list, gradca
             annotated_image.save(frame_path, format="JPEG")
             # print(f"Saved Grad-CAM fake full-frame {j + 1} of video frame {i + 1} to {frame_path}")
 
-
-
-
 # -------------------- Prediction --------------------
 
 # Function to predict deep-fake and generate output video
-def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=100, video_batch_size=100, fake_frames: bool = False, predict_audio_flag: bool = False, graph_path=None, _return=False):
+# def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=50, video_batch_size=50, fake_frames: bool = False, predict_audio_flag: bool = False, graph_path=None, _return=False):
 # pass audio_batch_size and video_batch_size in function call (means in views.py) according to system memory (default I pass - 100)
+# Also that batch size gives output like- If I give 10 then progress bar shows after each 10% 
+
+def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audio_batch_size=50, video_batch_size=50, fake_frames: bool = False, predict_audio_flag: bool = False, graph_path=None, _return=False, task_id=None):
 
     # if input_path.lower().endswith((".mp4", ".mkv","hevc")):
     if input_path.lower().endswith((".mp4")):
         print("Processing video...")
+# ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('video', task_id, 5, "Loading video...")
+# ----------------------------------------------------------------
+        
         frames, total_frames, fps = video_to_frames(input_path, duration)
         print("Video Processed")
+
 
         # Extract audio from the video
         try:
@@ -1231,19 +1373,26 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             print(f"No audio found in the video: {e}")
             audio_path = None
 
+# ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('video', task_id, 20, "Audio extracted")
+# ----------------------------------------------------------------
+
         # Video predictions
         print("Predicting for video...")
         batch_boxes, confidences, face_with_mask = predict_image_video(
-            frames, mtcnn, model_face, batch_size=video_batch_size, grad=fake_frames
+            frames, mtcnn, model_face, batch_size=video_batch_size, grad=fake_frames, task_id=task_id 
         )
         print("Video Prediction Completed")
 
+# ------------------------------ Uncomment to save frames ------------------------------------------
         # Save frames with predictions
-        # process_and_save_frames(frames, confidences, batch_boxes) if save_frames else None
         process_and_save_frames(frames, confidences, batch_boxes)
 
-        # saving Grad-CAM frames
+        # # # saving Grad-CAM frames
         process_and_save_gradcam_full_frames(frames, confidences,batch_boxes, face_with_mask)
+
+# ------------------------------------------------------------------------------------------------------
 
         # # Calculate average confidence for video
         confd = [conf for confs in confidences for conf in confs]
@@ -1251,15 +1400,17 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         fake_avg_video = sum(conf['fake'] for conf in confd) / len(confd)
         print(f"Average Video Confidence - Real: {real_avg_video:.2f}% Fake: {fake_avg_video:.2f}%")
 
-
         # Audio predictions
         if audio_path and predict_audio_flag:
+            if task_id:
+                send_progress_update('video', task_id, 85, "Predicting audio...")
+
             print("Predicting for Audio...")
-            audio_predictions, predictions, graph_generated = predict_audio(audio_path, model_audio, graph_path, audio_batch_size, duration=duration)
+            audio_predictions, predictions, graph_generated = predict_audio(audio_path, model_audio, graph_path, audio_batch_size, duration=duration, task_id=task_id )
 
             # Determine graph generation
             graph_generated = len(predictions) >= 2  # Based on your logic
-            
+
             # Check if audio predictions are silent (both are 0.0)
             if np.allclose(audio_predictions, [0.0, 0.0]):
                 # Handle silent or invalid audio
@@ -1289,12 +1440,22 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
                     fake_confidences
                 )
                 audio_interpolated = list(zip(real_interpolated, fake_interpolated))  # [(real1, fake1), ...]
+        
+# ---------------------For progressbar---------------------------
+                if task_id:
+                    send_progress_update('video', task_id, 90, "Audio prediction complete")
+# ----------------------------------------------------------------       
         else:
             # No audio predictions
             real_audio_confidence = 0.0
             fake_audio_confidence = 0.0
             audio_interpolated = []
             graph_generated = False  # 👈 Add this fallback
+
+# ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('video', task_id, 95, "Compiling final output...")
+# ----------------------------------------------------------------
 
         # Compile output video with predictions
         compiling_output_video(frames, batch_boxes, confidences, fps, total_frames, audio_interpolated)
@@ -1307,6 +1468,11 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             combine_video_audio(input_path)
             combine_video_audio(input_path, output_grad_location, fake_frames_write_location)
 
+# ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('video', task_id, 100, "Processing complete for video")  # FINAL'
+# ----------------------------------------------------------------
+
         # Return results
         if audio_path and predict_audio_flag:
             return real_avg_video, fake_avg_video, real_audio_confidence, fake_audio_confidence, graph_generated
@@ -1317,7 +1483,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
     elif input_path.lower().endswith((".wav", ".mp3", ".ogg")):
         print("Processing audio...")
-        audio_predictions, predictions, graph_generated = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration)
+        audio_predictions, predictions, graph_generated = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration, task_id=task_id )
         print("Audio Prediction Completed")
         real_confidence = audio_predictions[0] * 100  # Average confidence for "real"
         fake_confidence = audio_predictions[1] * 100  # Average confidence for "fake"
@@ -1328,14 +1494,23 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
     elif input_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
         print("Predicting on image...")
+# ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('image', task_id, 10, "Loading image...")
+# ----------------------------------------------------------------
         image = process_image(input_path)
-        batch_boxes, confidences, face_with_mask = predict_image_video(image, mtcnn, model_face, batch_size=1, grad=fake_frames)
+        batch_boxes, confidences, face_with_mask = predict_image_video(image, mtcnn, model_face, batch_size=1, grad=fake_frames, task_id=task_id, is_video=False)
         print("Prediction Done")
 
         # Handle if no faces are detected
         if not batch_boxes:
             print("No faces detected in the image.")
             return
+
+# ------------------------For progressbar-------------------------
+        if task_id:
+            send_progress_update('image', task_id, 80, "Compiling results...")
+# ----------------------------------------------------------------
 
         print("Compiling image...")
         all_confidence = compiling_image(image, batch_boxes, confidences)
@@ -1344,6 +1519,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
           all_confidence = compiling_fake_image(image, face_with_mask, batch_boxes, confidences)
         print("Compilation Done")
 
+# -----------------------For progressbar--------------------------
+        if task_id:
+            send_progress_update('image', task_id, 100, "Processing complete for image")
+# ----------------------------------------------------------------
         return all_confidence
 
 
