@@ -83,6 +83,7 @@
     <!-- Audio Section -->
     <div class="flex justify-center mb-6">
         <audio id="audioPlayer" controls preload="auto" class="w-full lg:w-2/4 rounded-lg shadow-lg">
+            {% comment %} <source src="{{ audio_file }}" type="{{ mime_type }}" > {% endcomment %}
             <source src="{{ audio_file }}" type="audio/{{ audio_file|slice:'-3:'|lower }}">
             Your browser does not support the audio element.
         </audio>

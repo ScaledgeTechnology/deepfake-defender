@@ -27,14 +27,21 @@ SECRET_KEY = 'django-insecure-e-kk5yvnrwtf(o5oaceyg3p8wr4o#jhogilqjvtq)w^1e+buko
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    # '192.168.1.16',  # Your local IP
+    # 'localhost',      # Local development
+    # '127.0.0.1',      # Localhost
+    # #'yourdomain.com', # Production domain if applicable
+    # 'www.scldeepfake.scaledge.io',
+    # '14.195.82.182',
+    "*"
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',                           ####################
-
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,23 +54,8 @@ INSTALLED_APPS = [
     'audiodf',
     'imagedf',
 
-    'channels',           #########
     
 ]
-
-ASGI_APPLICATION = 'deepfake.asgi.application'
-
-# For production, use Redis as channel layer
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
-
-        # "CONFIG": {
-        #     "hosts": [("127.0.0.1", 6379)],
-        # },
-
-    },
-}
 
 
 MIDDLEWARE = [
@@ -85,7 +77,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
+                'django.template.context_processors.debug',                          
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -141,21 +133,21 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 
-
-#used in production to serve static files
-# STATIC_ROOT = "static/"                          # 
-
+                     # 
 STATIC_URL = 'static/'
 
+# This will for development
 STATICFILES_DIRS = [
-    # os.path.join(BASE_DIR, 'uploaded_images'),
     os.path.join(BASE_DIR, 'static'),
     # os.path.join(BASE_DIR, 'models'),
-####    # os.path.join(BASE_DIR, 'videodf/static'),
 ]
 
-# CONTENT_TYPES = ['video']
-# MAX_UPLOAD_SIZE = "104857600"
+
+# This is where 'collectstatic' will copy all static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Separate from STATICFILES_DIRS
+# run- python manage.py collectstatic (for deployment)
+
+
 
 # Optional: Increase the default upload size limit (if needed)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB
@@ -171,3 +163,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'uploaded_files')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# C:\inetpub\wwwroot\deepfake-defender\.venv\Scripts\python.exe|C:\inetpub\wwwroot\deepfake-defender\.venv\Lib\site-packages\wfastcgi.py"

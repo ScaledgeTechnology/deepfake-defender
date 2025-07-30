@@ -245,13 +245,38 @@
 <body>
     <div class="container">
         <div class="error">ERROR 500 - SYSTEM FAILURE</div>
-        <div class="info">Something went terribly wrong... we can't process the prediction</div>
+        <div class="info" id="error-msg">Something went terribly wrong... we can't process the prediction</div>
         <div class="timer" id="timer">5</div>
         <a class="index-go-btn" id="back-btn" href="#">Try Again</a>
     </div>
 
     <script>
+        
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('msg');
+    if (msg) {
+        document.getElementById('error-msg').innerText = decodeURIComponent(msg);
+    }
+
         // Set button to go one level back
+        document.getElementById("back-btn").addEventListener("click", function(e) {
+            e.preventDefault();
+            window.history.back();
+        });
+
+        // Timer-based automatic redirection
+        let seconds = 5;
+        const timerElement = document.getElementById("timer");
+        const countdown = setInterval(function() {
+            seconds--;
+            timerElement.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(countdown);
+                window.history.back();
+            }
+        }, 1000);
+
+        {% comment %} // Set button to go one level back
         document.addEventListener("DOMContentLoaded", function () {
             var backBtn = document.getElementById("back-btn");
             var previousUrl = document.referrer || window.location.pathname.split('/').slice(0, -2).join('/') + '/';
@@ -267,7 +292,7 @@
                 clearInterval(timer);
                 window.location.href = document.referrer || window.location.pathname.split('/').slice(0, -2).join('/') + '/';
             }
-        }, 1000);
+        }, 1000); {% endcomment %}
     </script>
 </body>
 

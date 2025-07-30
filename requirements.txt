@@ -27,10 +27,23 @@ typing-extensions>=4.0.0
 # To download models
 huggingface_hub
 
+pydub
 # If librosa warning shows install manually-
 # pip install librosa
 
 
-channels 
-channels-redis
-daphne
+# channels 
+# channels-redis
+# daphne
+
+wfastcgi
+
+
+
+
+# For some mp3 or ogg file download ffmpeg - Go to website https://www.gyan.dev/ffmpeg/builds/ 
+# (Download package not source code) -> scroll- go inside git master build-> download ffmpeg-git-full.7z
+
+# Reference video: https://youtu.be/KBnyOH1o5Ms?si=-2EIW1Qw09CXnYyp
+# Extract folder - paste it on c drive - set env variable upto bin
+# then to check type "ffmpeg -version" on cmd

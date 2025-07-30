@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import JsonResponse, HttpResponse  
 from django.views.decorators.csrf import csrf_exempt
 import re
 import urllib.parse
@@ -11,8 +11,8 @@ from common.deepfake_logic import load_models,predict
 # from common.old_logic_deepfake import load_models,predict
 import uuid
 
-from django.http import JsonResponse
-
+from deepfake.views import send_progress_error
+# import mimetypes
 
 # -------------------- All Paths -------------------- 
 AUDIO_UPLOAD_PATH = os.path.join(settings.BASE_DIR, "uploaded_files/audio_predict/audio/")
@@ -99,7 +99,10 @@ def audio_upload(request):
 
         except Exception as e:
             print(f"Prediction Error: {e}")  # Log error for debugging
-            return redirect("error_page")  # Redirect if prediction fails
+            send_progress_error('audio', task_id, str(e))
+            return JsonResponse({'error': str(e), 'code': 'fail'}, status=500)
+            # return redirect("error_page")  # Redirect if prediction fails
+
 
     return render(request, "audiodf/audio_upload.html")
 
@@ -115,9 +118,15 @@ def audio_display(request):
     if not (audio_file and real_confidence and fake_confidence and graph_path):
         return redirect("audio_upload")
 
+    ## Guess MIME type (e.g., 'audio/mpeg', 'audio/flac', etc.)
+    # mime_type, _ = mimetypes.guess_type(audio_file)
+    # mime_type = mime_type or "audio/*"  # fallback if unknown
+
+
     return render(request, "audiodf/audio_display.html", {
         "audio_file": audio_file,
         "graph_path": graph_path,
         "real_confidence": real_confidence,
         "fake_confidence": fake_confidence,
+        # "mime_type": mime_type,  # ← add this
     })

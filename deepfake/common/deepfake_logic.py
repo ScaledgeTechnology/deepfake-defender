@@ -47,23 +47,70 @@ from scipy.interpolate import make_interp_spline
 from matplotlib.collections import LineCollection
 
 from huggingface_hub import hf_hub_download
-
+import sys
 
 #  Django imports
 from django.conf import settings
+import ssl
+import certifi
 
 # ---------------------For progressbar---------------------------
-from common.progress import send_progress_update
+# from common.progress import send_progress_update
+from deepfake.views import send_progress_update
 
-# -------------------- All Paths --------------------
-# ---------- Models path -------------
-# Hugging Face repo details
+
+# from pydub import AudioSegment
+# from pydub.utils import which
+
+
+# # Add this block before load_audio()!
+# ffmpeg_path = which("ffmpeg")
+# print(ffmpeg_path)
+
+# AudioSegment.converter = "C:\\ffmpeg\\bin\\ffmpeg.exe"
+# # Print confirmation
+# print(f"Using FFmpeg from: {AudioSegment.converter}")
+# print(f"FFmpeg exists: {os.path.isfile(AudioSegment.converter)}")
+
+# ------------------------------------------------------- For (IIS only) Directly in cache directory -------------------------------------------------------
+
+# CACHE_DIR = os.path.join(settings.BASE_DIR, '.cache')
+# os.makedirs(CACHE_DIR, exist_ok=True)
+
+# # Set environment variables for various libraries
+# os.environ['HF_HOME'] = os.path.join(CACHE_DIR, 'huggingface')
+# os.environ['TORCH_HOME'] = os.path.join(CACHE_DIR, 'torch')
+# os.environ['MPLCONFIGDIR'] = os.path.join(CACHE_DIR, 'matplotlib')
+
+# # Create subdirectories
+# for subdir in ['huggingface', 'torch', 'matplotlib']:
+#     os.makedirs(os.path.join(CACHE_DIR, subdir), exist_ok=True)
+
+# # Now modify your Hugging Face model downloads to use the custom cache
+# HF_REPO = "Scaledge/DeepFakeDetectorModels"
+# video_model_location = hf_hub_download(
+#     repo_id=HF_REPO, 
+#     filename="resnetinceptionv1_epoch_32.pth",
+#     cache_dir=os.environ['HF_HOME']
+# )
+# audio_model_location = hf_hub_download(
+#     repo_id=HF_REPO, 
+#     filename="audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth",
+#     cache_dir=os.environ['HF_HOME']
+# )
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------
+# ---------- Models path (For local) -------------
+
+## Hugging Face repo details
 HF_REPO = "Scaledge/DeepFakeDetectorModels"
 
 # Download model files from Hugging Face
 video_model_location = hf_hub_download(repo_id=HF_REPO, filename="resnetinceptionv1_epoch_32.pth")
 audio_model_location = hf_hub_download(repo_id=HF_REPO, filename="audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth")
 
+
+# ------------------------------------------------- Directly without hugging face -------------------------------------------------
 # video_model_location = os.path.join(settings.BASE_DIR, 'models/resnetinceptionv1_epoch_32.pth')
 # audio_model_location = os.path.join(settings.BASE_DIR, 'models/audiotrans_nmels_80_head_8_enc_6_ctx_250_embdim_512_epoch_1_acc_0.7115_lr_0.000100.pth')
 
@@ -250,45 +297,6 @@ def load_models():
 
     return mtcnn, model_face, model_audio
 
-# def load_models():
-#     DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-#     mtcnn = MTCNN(
-#         select_largest=False,
-#         post_process=False,
-#         selection_method='probability',
-#         keep_all=True,
-#         device=DEVICE
-#     ).to(DEVICE)
-
-#     model_face = InceptionResnetV1(
-#         pretrained="vggface2",
-#         classify=True,
-#         num_classes=1,
-#         device=DEVICE
-#     )
-
-#     dims = ModelDimensions(
-#         n_mels=80,          # Number of Mel-frequency filter banks
-#         n_audio_ctx=500//2,   # Audio context (length of positional embedding)
-#         n_audio_state=512,  # Model dimension size
-#         n_audio_head=8,     # Number of attention heads
-#         n_audio_layer=6     # Number of attention layers
-#     )
-
-#     # Number of classes for classification (e.g., 2 for binary classification)
-#     num_classes = 2
-#     model_audio = AudioClassifier(dims=dims,num_classes=num_classes)
-#     checkpoint = torch.load(audio_model_location, map_location=torch.device('cpu'))
-#     # model_audio.load_state_dict(checkpoint)   # For new model
-#     model_audio.load_state_dict(checkpoint['model'].state_dict())  
-#     model_audio.to(DEVICE)
-
-#     checkpoint = torch.load(video_model_location, map_location=torch.device('cpu'))
-#     model_face.load_state_dict(checkpoint['model_state_dict'])
-#     model_face.to(DEVICE)
-
-#     return mtcnn, model_face, model_audio
-
 # -------------------------------------
 
 # mtcnn, model_face, model_audio = load_models()
@@ -305,6 +313,7 @@ HOP_LENGTH = 160
 CHUNK_LENGTH = 5
 N_SAMPLES = CHUNK_LENGTH * SAMPLE_RATE  # 80000 samples in a 5-second chunk
 N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  # 500 frames in a mel spectrogram input
+
 
 
 def load_audio(file: str, sr: int = 16000, duration: int = None):
@@ -325,7 +334,7 @@ def load_audio(file: str, sr: int = 16000, duration: int = None):
     """
     try:
         try:
-                  # Load audio file using soundfile
+            # Load audio file using soundfile
             audio, original_sr = sf.read(file,
                                       #stop=16000*duration if duration else duration,
                                      dtype='int16')
@@ -364,6 +373,53 @@ def load_audio(file: str, sr: int = 16000, duration: int = None):
         print(f"Failed to load audio: {str(e)}")
         print("Real audio: N/A, Fake audio: N/A")
         return np.array([])  # Return empty array on failure (this handle for silent audio)
+
+
+
+
+# def load_audio(file: str, sr: int = 16000, duration: int = None):
+#     """
+#     Robust audio loader for various formats (mp3, wav, ogg).
+#     Uses FFmpeg backend via pydub for cross-platform reliability.
+
+#     Parameters:
+#         file (str): Path to audio file
+#         sr (int): Target sampling rate (default: 16000)
+#         duration (int): Optional duration in seconds to truncate
+
+#     Returns:
+#         np.ndarray: 1D float32 waveform
+#     """
+#     try:
+#         # Load using pydub (FFmpeg-backed)
+#         audio = AudioSegment.from_file(file)
+#         audio = audio.set_channels(1)  # Convert to mono
+#         audio = audio.set_frame_rate(sr)  # Resample to 16 kHz
+
+#         # Optional duration truncation
+#         if duration is not None:
+#             audio = audio[:duration * 1000]  # duration in ms
+
+#         # Get samples as float32 normalized between -1 and 1
+#         samples = np.array(audio.get_array_of_samples())
+#         if samples.dtype == np.int16:
+#             samples = samples.astype(np.float32) / 32768.0
+#         elif samples.dtype == np.int32:
+#             samples = samples.astype(np.float32) / 2147483648.0
+#         else:
+#             samples = samples.astype(np.float32)
+
+#         # Handle silence or invalid audio
+#         if not np.any(np.isfinite(samples)) or np.all(samples == 0):
+#             print("Real audio: N/A, Fake audio: N/A")
+#             return np.array([])
+
+#         return samples
+
+#     except Exception as e:
+#         print(f"Failed to load audio: {e}")
+#         print("Real audio: N/A, Fake audio: N/A")
+#         return np.array([])
 # -------------------------------------------------------------------------------------------------------------------
 
 
@@ -372,26 +428,26 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
     Pad or trim the audio array to N_SAMPLES, as expected by the encoder.
     """
     if torch.is_tensor(array):
-      if array.shape[axis] > length:
-          array = array.index_select(
-              dim=axis, index=torch.arange(length, device=array.device)
-          )
+        if array.shape[axis] > length:
+            array = array.index_select(
+                dim=axis, index=torch.arange(length, device=array.device)
+            )
 
-      if array.shape[axis] < length:
-          pad_widths = [(0, 0)] * array.ndim
-          pad_widths[axis] = (0, length - array.shape[axis])
-          array = F.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
+        if array.shape[axis] < length:
+            pad_widths = [(0, 0)] * array.ndim
+            pad_widths[axis] = (0, length - array.shape[axis])
+            array = F.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
 
     else:  # Handle NumPy arrays
-      if array.shape[axis] > length:
-          array = array.take(indices=range(length), axis=axis)
+        if array.shape[axis] > length:
+            array = array.take(indices=range(length), axis=axis)
 
-      if array.shape[axis] < length:
-          pad_widths = [(0, 0)] * array.ndim
-          pad_widths[axis] = (0, length - array.shape[axis])
+        if array.shape[axis] < length:
+            pad_widths = [(0, 0)] * array.ndim
+            pad_widths[axis] = (0, length - array.shape[axis])
 
-          # Flatten the pad widths to match PyTorch's F.pad format
-          array = np.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
+            # Flatten the pad widths to match PyTorch's F.pad format
+            array = np.pad(array, [pad for sizes in pad_widths[::-1] for pad in sizes])
 
     return array
 
@@ -623,48 +679,48 @@ def compiling_output_video(frames, boxes_batch, confidences_list, fps, total_fra
         frame = np.array(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         try:
-          shift = 5
-          if boxes is not None:
-            for i, (box, confidence) in enumerate(zip(boxes, confidences)):
-                x1, y1, x2, y2 = map(int, box)
+            shift = 5
+            if boxes is not None:
+                for i, (box, confidence) in enumerate(zip(boxes, confidences)):
+                    x1, y1, x2, y2 = map(int, box)
 
-                real = float(confidence['real'])
-                fake = float(confidence['fake'])
-                label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
-                label_size = (x2 - x1) * 0.01
-                higher = int((y2 - y1) * 0.1)
-                label_box_y = y2 + higher
-                if confidence['real'] > 55:
-                    box_colour = (0, 255, 0)
-                else:
-                    box_colour = (0, 0, 255)
+                    real = float(confidence['real'])
+                    fake = float(confidence['fake'])
+                    label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
+                    label_size = (x2 - x1) * 0.01
+                    higher = int((y2 - y1) * 0.1)
+                    label_box_y = y2 + higher
+                    if confidence['real'] > 55:
+                        box_colour = (0, 255, 0)
+                    else:
+                        box_colour = (0, 0, 255)
 
-                # Draw the rectangle for face
-                cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
+                    # Draw the rectangle for face
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
 
-                # Thickness and Scale
-                font_scale = 0.0008 * max(frame_width, frame_height)
-                thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+                    # Thickness and Scale
+                    font_scale = 0.0008 * max(frame_width, frame_height)
+                    thickness = max(1, int(0.002 * max(frame_width, frame_height)))
 
-                # Face value
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+                    # Face value
+                    cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                    cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                # Draw label text
-                text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-                _, text_height = text_size
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+                    # Draw label text
+                    text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                    _, text_height = text_size
+                    cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                    cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                shift += (text_height + 10)
+                    shift += (text_height + 10)
 
-          # Draw audio prediction text
-          if len(audio_interpolated):
-              real_audio, fake_audio = audio_interpolated[idx]
-              audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
-              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
-              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-          out.write(frame)
+            # Draw audio prediction text
+            if len(audio_interpolated):
+                real_audio, fake_audio = audio_interpolated[idx]
+                audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            out.write(frame)
 
         except Exception as e:
             print(f"Error processing frame {frames.index(frame) + 1}: {e}")
@@ -685,56 +741,56 @@ def compile_fake_video(frames, frames_with_masks, boxes_batch, confidences_list,
         shift = 5
 
         try:
-          if boxes is not None:
-            for i, (box, confidence, mask_frame) in enumerate(zip(boxes, confidences, mask_frames)):
-                x1, y1, x2, y2 = map(int, box)
+            if boxes is not None:
+                for i, (box, confidence, mask_frame) in enumerate(zip(boxes, confidences, mask_frames)):
+                    x1, y1, x2, y2 = map(int, box)
 
-                real = float(confidence['real'])
-                fake = float(confidence['fake'])
-                label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
-                label_size = (x2 - x1) * 0.01
-                higher = int((y2 - y1) * 0.1)
-                label_box_y = y2 + higher
+                    real = float(confidence['real'])
+                    fake = float(confidence['fake'])
+                    label = f"Real Face: {real:.1f}% Fake Face: {fake:.1f}%"
+                    label_size = (x2 - x1) * 0.01
+                    higher = int((y2 - y1) * 0.1)
+                    label_box_y = y2 + higher
 
-                if real > 55:
-                    box_colour = (0, 255, 0)
-                else:
-                    box_colour = (0, 0, 255)
-                    crop = frame[y1:y2, x1:x2]
-                    h, w = crop.shape[:2]  # Get actual slice height and width
+                    if real > 55:
+                        box_colour = (0, 255, 0)
+                    else:
+                        box_colour = (0, 0, 255)
+                        crop = frame[y1:y2, x1:x2]
+                        h, w = crop.shape[:2]  # Get actual slice height and width
 
-                    resized_mask = cv2.resize(mask_frame, (w, h))  # Resize mask to match cropped region
+                        resized_mask = cv2.resize(mask_frame, (w, h))  # Resize mask to match cropped region
 
-                    resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
+                        resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
 
-                    frame[y1:y2, x1:x2] = resized_mask_bgr
+                        frame[y1:y2, x1:x2] = resized_mask_bgr
 
-                # Draw bounding box
-                cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
+                    # Draw bounding box
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), box_colour, 2)
 
-                # Label with face number
-                font_scale = 0.0008 * max(frame_width, frame_height)
-                thickness = max(1, int(0.002 * max(frame_width, frame_height)))
+                    # Label with face number
+                    font_scale = 0.0008 * max(frame_width, frame_height)
+                    thickness = max(1, int(0.002 * max(frame_width, frame_height)))
 
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
+                    cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                    cv2.putText(frame, f'Face {i+1}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, label_size, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                # Draw label text on top
-                text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-                _, text_height = text_size
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
-                cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+                    # Draw label text on top
+                    text_size = cv2.getTextSize(f'Face {i+1}: {label}', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
+                    _, text_height = text_size
+                    cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+                    cv2.putText(frame, f'Face {i+1}: {label}', (5, text_height + shift), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
-                shift += (text_height + 10)
+                    shift += (text_height + 10)
 
-          # Audio text (optional)
-          if len(audio_interpolated):
-              real_audio, fake_audio = audio_interpolated[idx]
-              audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
-              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
-              cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # Audio text (optional)
+            if len(audio_interpolated):
+                real_audio, fake_audio = audio_interpolated[idx]
+                audio_text = f"Real audio: {real_audio:.1f}% Fake audio: {fake_audio:.1f}%"
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, audio_text, (5, frame_height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-          out.write(frame)
+            out.write(frame)
 
         except Exception as e:
             print(f"Error processing frame {idx + 1}: {e}")
@@ -984,37 +1040,46 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     """
     Predict whether the audio is real or fake.
     """
-# ---------------------For progressbar---------------------------
-    if task_id:
-        send_progress_update('audio', task_id, 0, "Loading audio file...")
-# ----------------------------------------------------------------
-
 
     print(f"Predicting for Audio...\n{audio_path}")
 
    # Load the audio file
     audio_data = load_audio(audio_path, duration=duration)  # Load the raw audio data
     
+    if task_id:
+        send_progress_update('audio', task_id, 10, "Audio loaded")
+
     # print(audio_data)
     # -----------------------------------------
 
     # If the audio is silent, return N/A
     if audio_data.size == 0:
         # return [0.0, 0.0], []  # Return 0% confidence for both real and fake
+        if task_id:
+            send_progress_update('audio', task_id, 100, "No audio content detected")
         return [0.0, 0.0], [], False  # Return3 values for silent audio - else sometime it gives NoneType error
+    
     # -----------------------------------------
+
+    if task_id:
+        send_progress_update('audio', task_id, 20, "Spliting audio file into chunks...")
 
     model_audio.eval()
     # Split the audio into chunks
     audio_chunks = split_audio(audio_data, stride_seconds, sample_rate=sample_rate)
     mel_specs = []
 
-    # # Process each chunk
+
     for chunk in audio_chunks:
         mel_spec = log_mel_spectrogram(chunk, n_mels=80, padding=N_SAMPLES, device=next(model_audio.parameters()).device)
         mel_spec = mel_spec.unsqueeze(0)  # Add batch dimension (1, n_mels, n_frames)
         mel_spec = pad_or_trim(mel_spec, length=N_FRAMES, axis=-1)
         mel_specs.append(mel_spec)
+
+        # ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('audio', task_id, 30, "Processing your audio...")
+        # ----------------------------------------------------------------
 
     mel_specs = torch.cat(mel_specs, dim=0)
 
@@ -1029,10 +1094,10 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     for i in trange(num_batches):
 
 # ---------------------For progressbar---------------------------
-        progress = int(10 + (i / num_batches) * 80)
-        if task_id:
+        if task_id and i % max(1, num_batches // 10) == 0:
+            progress = 30 + int((i / num_batches) * 50)
             send_progress_update('audio', task_id, progress, 
-                              f"Processing your audio...")
+                              f"Analyzing audio content...")
 # ----------------------------------------------------------------
 
         batch = mel_specs[i * batch_size : (i + 1) * batch_size]
@@ -1047,6 +1112,10 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     predictions = np.array(predictions)
     # print(predictions)
 
+# ---------------------For progressbar---------------------------
+    if task_id:
+        send_progress_update('audio', task_id, 90, "Generating Graph...")
+# ----------------------------------------------------------------
     graph_generated = visualize_audio_predictions_waveform(predictions, graph_path, duration=duration, stride_seconds=stride_seconds)
 
     if not graph_generated:
@@ -1062,15 +1131,12 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     # return audio_prediction
     return audio_prediction, predictions, graph_generated
 
+
+
+
 ### ---------------------------------------------------------------------------------------------- 
 
 def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, grad: bool = False, task_id=None, is_video=True):
-
-# ---------------------For progressbar---------------------------  
-    if task_id:
-        media_type = "video" if is_video else "image"
-        send_progress_update(media_type, task_id, 10, f"Starting {media_type} analysis")
-# ----------------------------------------------------------------   
 
     # Define batch size
     model_face.eval()
@@ -1086,18 +1152,24 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         target_layers = [model_face.block8.branch1[-1]]
         cam = GradCAM(model=model_face, target_layers=target_layers)
 
+# ---------------------For progressbar---------------------------  
+    if task_id:
+        media_type = "video" if is_video else "image"
+        send_progress_update(media_type, task_id, 10, f"Starting {media_type} analysis")
+# ----------------------------------------------------------------   
+
     # Process each batch
     for i in trange(num_batches):
 
 # ---------------------For progressbar---------------------------
-        progress = int(10 + (i / num_batches) * 80)
+        progress_base  = int(10 + (i / num_batches) * 80)
         if task_id:
             media_type = "video" if is_video else "image"
             # showing batch size
             # send_progress_update(media_type, task_id, progress,
             #                   f"Processing {media_type} batch {i+1}/{num_batches}")
             # Not showing batch size
-            send_progress_update(media_type, task_id, progress,
+            send_progress_update(media_type, task_id, progress_base,
                               f"Processing your {media_type}...")
 # ----------------------------------------------------------------           
 
@@ -1105,6 +1177,11 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         batch = input_images[i * batch_size : (i + 1) * batch_size]
         # Detect faces in the current batch
         boxes, probs = mtcnn.detect(batch)  # Perform detection on the current batch
+
+# ----------------------------------------------------------------  
+    if task_id:
+        send_progress_update(media_type, task_id, progress_base + 10, "Detecting faces...")
+ # ----------------------------------------------------------------  
 
         #print(probs, type(probs))
         try:
@@ -1123,70 +1200,89 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         batch_faces = mtcnn.extract(batch, boxes, None)  # Extract faces from the detected boxes
         # print(batch_faces)
 
+# ----------------------------------------------------------------  
+    if task_id:
+        media_type = "video" if is_video else "image"
+        send_progress_update(media_type, task_id, progress_base + 20, "Extracting faces...")
+# ----------------------------------------------------------------  
+
         for idx, face in enumerate(batch_faces):
-          if face is not None:
-            valid_faces.append(face)
-          else:
-            none_indices.append(idx)
+            if face is not None:
+                valid_faces.append(face)
+            else:
+                none_indices.append(idx)
         if batch_faces:
-          batch_faces = valid_faces
+            batch_faces = valid_faces
 
-          # Convert the list of faces to a tensor
-          batch_faces =  torch.cat(batch_faces, dim=0).to(torch.float32).to(device) / 255.0  # Normalize faces to [0, 1]
-          batch_faces = F.interpolate(batch_faces, size=(256, 256), mode='bilinear', align_corners=False)  # Resize faces
-          print(next(model_face.parameters()).device)
-          print(batch_faces.device)
+            # Convert the list of faces to a tensor
+            batch_faces =  torch.cat(batch_faces, dim=0).to(torch.float32).to(device) / 255.0  # Normalize faces to [0, 1]
+            batch_faces = F.interpolate(batch_faces, size=(256, 256), mode='bilinear', align_corners=False)  # Resize faces
+            # print(next(model_face.parameters()).device)
+            # print(batch_faces.device)
 
-          # Perform batch prediction
-          with torch.no_grad():
-              outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
-              real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
-              fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
-              print(torch.is_grad_enabled())
+# ----------------------------------------------------------------
+            if task_id:
+                media_type = "video" if is_video else "image"
+                send_progress_update(media_type, task_id, progress_base + 30, "Preprocessing faces...")
+# ----------------------------------------------------------------
 
-          # Process each face in the batch
-          for j, face in enumerate(batch_faces):
-              # Generate Grad-CAM visualization if enabled
-              if grad:
-                  prev_face = face.permute(1, 2, 0).cpu().numpy() * 255  # Convert to image format
-                  prev_face = prev_face.astype('uint8')
-                  face_image_to_plot = prev_face.copy()
-                  targets = [ClassifierOutputTarget(0)]
-                  grayscale_cam = cam(input_tensor=face.unsqueeze(0), targets=targets, eigen_smooth=True)
-                  grayscale_cam = grayscale_cam[0]  # Select Grad-CAM for the current face
-                  visualization = show_cam_on_image(face_image_to_plot / 255.0, grayscale_cam, use_rgb=True)
-                  face_with_mask = cv2.addWeighted(prev_face, 1, visualization, 0.5, 0)
-                  visualizations.append(face_with_mask)
+            # Perform batch prediction
+            with torch.no_grad():
+                outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
+                real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
+                fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
+                print(torch.is_grad_enabled())
 
-              # Save confidences
-              confidence = {
+# ----------------------------------------------------------------
+            if task_id:
+                media_type = "video" if is_video else "image"
+                send_progress_update(media_type, task_id, progress_base + 40, "Predicting...")
+# ----------------------------------------------------------------
+
+            # Process each face in the batch
+            for j, face in enumerate(batch_faces):
+                # Generate Grad-CAM visualization if enabled
+                if grad:
+                    prev_face = face.permute(1, 2, 0).cpu().numpy() * 255  # Convert to image format
+                    prev_face = prev_face.astype('uint8')
+                    face_image_to_plot = prev_face.copy()
+                    targets = [ClassifierOutputTarget(0)]
+                    grayscale_cam = cam(input_tensor=face.unsqueeze(0), targets=targets, eigen_smooth=True)
+                    grayscale_cam = grayscale_cam[0]  # Select Grad-CAM for the current face
+                    visualization = show_cam_on_image(face_image_to_plot / 255.0, grayscale_cam, use_rgb=True)
+                    face_with_mask = cv2.addWeighted(prev_face, 1, visualization, 0.5, 0)
+                    visualizations.append(face_with_mask)
+
+                # Save confidences
+                confidence = {
                   'real': real_predictions[j] * 100,
                   'fake': fake_predictions[j] * 100
-              }
-              confidences.append(confidence)
-          print(len(confidences))
-          print(len(visualizations))
+                }
+                confidences.append(confidence)
 
-          probs = probs.tolist()
-          for idx in sorted(none_indices, reverse=True):
-            probs.pop(idx)
+            # print(len(confidences))
+            # print(len(visualizations))
 
-          iterator = iter(confidences)
-          confidences = [[next(iterator) for _ in sublist] for sublist in probs]
+            probs = probs.tolist()
+            for idx in sorted(none_indices, reverse=True):
+                probs.pop(idx)
+  
+            iterator = iter(confidences)
+            confidences = [[next(iterator) for _ in sublist] for sublist in probs]
+  
+            iterator = iter(visualizations)
+            visualizations = [[next(iterator) for _ in sublist] for sublist in probs]
+  
+            for idx in none_indices:
+                confidences.insert(idx, [{'real': 0, 'fake': 0}])
+                visualizations.insert(idx, None)
 
-          iterator = iter(visualizations)
-          visualizations = [[next(iterator) for _ in sublist] for sublist in probs]
-
-          for idx in none_indices:
-            confidences.insert(idx, [{'real': 0, 'fake': 0}])
-            visualizations.insert(idx, None)
-
-          confidences_list.extend(confidences)
-          visualizations_list.extend(visualizations)
+            confidences_list.extend(confidences)
+            visualizations_list.extend(visualizations)
 
         else:
-          confidences_list.extend(confidences)
-          visualizations_list.extend(visualizations)
+            confidences_list.extend(confidences)
+            visualizations_list.extend(visualizations)
 
     try:
         torch.cuda.empty_cache()
@@ -1357,7 +1453,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         print("Processing video...")
 # ---------------------For progressbar---------------------------
         if task_id:
-            send_progress_update('video', task_id, 5, "Loading video...")
+            send_progress_update('video', task_id, 5, "Loading video file...")
 # ----------------------------------------------------------------
         
         frames, total_frames, fps = video_to_frames(input_path, duration)
@@ -1483,6 +1579,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
 
     elif input_path.lower().endswith((".wav", ".mp3", ".ogg")):
         print("Processing audio...")
+        # ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('audio', task_id, 5, "Loading audio file...")
+            # ---------------------For progressbar---------------------------
         audio_predictions, predictions, graph_generated = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration, task_id=task_id )
         print("Audio Prediction Completed")
         real_confidence = audio_predictions[0] * 100  # Average confidence for "real"
@@ -1496,7 +1596,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         print("Predicting on image...")
 # ---------------------For progressbar---------------------------
         if task_id:
-            send_progress_update('image', task_id, 10, "Loading image...")
+            send_progress_update('image', task_id, 5, "Loading image file...")
 # ----------------------------------------------------------------
         image = process_image(input_path)
         batch_boxes, confidences, face_with_mask = predict_image_video(image, mtcnn, model_face, batch_size=1, grad=fake_frames, task_id=task_id, is_video=False)

@@ -5,17 +5,20 @@ from moviepy.editor import VideoFileClip
 
 from django.conf import settings
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import JsonResponse, HttpResponse  
 from django.views.decorators.csrf import csrf_exempt
 import re
 import urllib.parse
-from django.http import JsonResponse
+
 
 from common.deepfake_logic import load_models,predict
 
 # from common.old_logic_deepfake import load_models,predict
 
 # from common.progress import send_progress_update
+from deepfake.views import send_progress_error
+
+
 import uuid
 
 # ---------------------- all paths --------------------------
@@ -138,7 +141,9 @@ def video_upload(request):
 
         except Exception as e:
             print(f"Prediction Error: {e}")  # Log error for debugging
-            return redirect("error_page")  # Redirect if prediction fails
+            send_progress_error('video', task_id, str(e))
+            return JsonResponse({'error': str(e), 'code': 'fail'}, status=500)
+            # return redirect("error_page") 
 
     return render(request, 'videodf/video_upload.html')
 
