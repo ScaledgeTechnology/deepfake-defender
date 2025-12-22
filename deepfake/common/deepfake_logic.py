@@ -53,6 +53,7 @@ import sys
 from django.conf import settings
 import ssl
 import certifi
+import time
 
 # ---------------------For progressbar---------------------------
 # from common.progress import send_progress_update
@@ -138,6 +139,17 @@ output_grad_location = os.path.join(settings.BASE_DIR, 'uploaded_files/video_pre
 # Directories for saving Grad-CAM highlighted fake frames
 grad_fake_frames_dir = os.path.join(settings.BASE_DIR, 'uploaded_files/video_predict/Grad_Fake_frames/')
 os.makedirs(grad_fake_frames_dir, exist_ok=True)
+
+
+
+# 🔒 WAIT UNTIL FILES ARE READY - use to redirect after filesystem close
+def wait_for_file(path, timeout=60):
+    start = time.time()
+    while time.time() - start < timeout:
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            return True
+        time.sleep(0.5)
+    return False
 
 
 # -------------------- Models --------------------
@@ -374,52 +386,6 @@ def load_audio(file: str, sr: int = 16000, duration: int = None):
         print("Real audio: N/A, Fake audio: N/A")
         return np.array([])  # Return empty array on failure (this handle for silent audio)
 
-
-
-
-# def load_audio(file: str, sr: int = 16000, duration: int = None):
-#     """
-#     Robust audio loader for various formats (mp3, wav, ogg).
-#     Uses FFmpeg backend via pydub for cross-platform reliability.
-
-#     Parameters:
-#         file (str): Path to audio file
-#         sr (int): Target sampling rate (default: 16000)
-#         duration (int): Optional duration in seconds to truncate
-
-#     Returns:
-#         np.ndarray: 1D float32 waveform
-#     """
-#     try:
-#         # Load using pydub (FFmpeg-backed)
-#         audio = AudioSegment.from_file(file)
-#         audio = audio.set_channels(1)  # Convert to mono
-#         audio = audio.set_frame_rate(sr)  # Resample to 16 kHz
-
-#         # Optional duration truncation
-#         if duration is not None:
-#             audio = audio[:duration * 1000]  # duration in ms
-
-#         # Get samples as float32 normalized between -1 and 1
-#         samples = np.array(audio.get_array_of_samples())
-#         if samples.dtype == np.int16:
-#             samples = samples.astype(np.float32) / 32768.0
-#         elif samples.dtype == np.int32:
-#             samples = samples.astype(np.float32) / 2147483648.0
-#         else:
-#             samples = samples.astype(np.float32)
-
-#         # Handle silence or invalid audio
-#         if not np.any(np.isfinite(samples)) or np.all(samples == 0):
-#             print("Real audio: N/A, Fake audio: N/A")
-#             return np.array([])
-
-#         return samples
-
-#     except Exception as e:
-#         print(f"Failed to load audio: {e}")
-#         print("Real audio: N/A, Fake audio: N/A")
-#         return np.array([])
 # -------------------------------------------------------------------------------------------------------------------
 
 
@@ -820,11 +786,12 @@ def compiling_image(images: list, boxes, confidences):
         print("No face detected in the image.")
         return
 
-    all_confidence = []  # Store confidence for each face                 # Added
+    all_confidence = []  # Store confidence for each face     
 
     # Annotate each detected face
     print(boxes)
     for box, confidence in zip(boxes, confidences):
+    # for box, confidence in enumerate(zip(boxes, confidences)):
         shift = 5
         for face_index, (bx, conf) in enumerate(zip(box, confidence)):
             x1, y1, x2, y2 = map(int, bx)
@@ -886,7 +853,7 @@ def compiling_fake_image(images: list, masked_faces, boxes, confidences):
         print("No face detected in the image.")
         return
 
-    all_confidence = []  # Store confidence for each face                 # Added
+    all_confidence = []  # Store confidence for each face   
 
     # Annotate each detected face
     # print(boxes)
@@ -921,7 +888,7 @@ def compiling_fake_image(images: list, masked_faces, boxes, confidences):
             # resized_mask_bgr = cv2.cvtColor(resized_mask, cv2.COLOR_RGB2BGR)
             # image[y1:y2, x1:x2] = resized_mask
 
-# Only annotate if fake frame detected
+            # Only annotate if fake frame detected
             if real < 55:
                 # Overlay the fake mask
                 resized_mask = cv2.resize(face, (x2 - x1, y2 - y1))
@@ -1046,6 +1013,7 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
    # Load the audio file
     audio_data = load_audio(audio_path, duration=duration)  # Load the raw audio data
     
+    # --------------progress--------------------
     if task_id:
         send_progress_update('audio', task_id, 10, "Audio loaded")
 
@@ -1059,10 +1027,10 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
             send_progress_update('audio', task_id, 100, "No audio content detected")
         return [0.0, 0.0], [], False  # Return3 values for silent audio - else sometime it gives NoneType error
     
-    # -----------------------------------------
-
+    # --------------progress---------------------
     if task_id:
         send_progress_update('audio', task_id, 20, "Spliting audio file into chunks...")
+    # -----------------------------------------
 
     model_audio.eval()
     # Split the audio into chunks
@@ -1093,12 +1061,12 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     # for i in range(num_batches):
     for i in trange(num_batches):
 
-# ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         if task_id and i % max(1, num_batches // 10) == 0:
             progress = 30 + int((i / num_batches) * 50)
             send_progress_update('audio', task_id, progress, 
                               f"Analyzing audio content...")
-# ----------------------------------------------------------------
+        # ----------------------------------------------------------------
 
         batch = mel_specs[i * batch_size : (i + 1) * batch_size]
         with torch.no_grad():
@@ -1112,10 +1080,11 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
     predictions = np.array(predictions)
     # print(predictions)
 
-# ---------------------For progressbar---------------------------
+    # ---------------------For progressbar---------------------------
     if task_id:
         send_progress_update('audio', task_id, 90, "Generating Graph...")
-# ----------------------------------------------------------------
+    # ----------------------------------------------------------------
+
     graph_generated = visualize_audio_predictions_waveform(predictions, graph_path, duration=duration, stride_seconds=stride_seconds)
 
     if not graph_generated:
@@ -1123,10 +1092,10 @@ def predict_audio(audio_path, model_audio, graph_path, batch_size=100, sample_ra
 
     audio_prediction = np.mean(predictions, axis=0)
 
-# ---------------------For progressbar---------------------------
+    # ---------------------For progressbar---------------------------
     if task_id:
-        send_progress_update('audio', task_id, 100, "Audio analysis complete")
-# ----------------------------------------------------------------
+        send_progress_update('audio', task_id, 92, "Audio analysis complete")
+    # ----------------------------------------------------------------
 
     # return audio_prediction
     return audio_prediction, predictions, graph_generated
@@ -1152,36 +1121,27 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         target_layers = [model_face.block8.branch1[-1]]
         cam = GradCAM(model=model_face, target_layers=target_layers)
 
-# ---------------------For progressbar---------------------------  
-    if task_id:
-        media_type = "video" if is_video else "image"
-        send_progress_update(media_type, task_id, 10, f"Starting {media_type} analysis")
-# ----------------------------------------------------------------   
 
     # Process each batch
     for i in trange(num_batches):
 
-# ---------------------For progressbar---------------------------
-        progress_base  = int(10 + (i / num_batches) * 80)
+        # ---------------------For progressbar---------------------------
         if task_id:
             media_type = "video" if is_video else "image"
-            # showing batch size
-            # send_progress_update(media_type, task_id, progress,
-            #                   f"Processing {media_type} batch {i+1}/{num_batches}")
-            # Not showing batch size
-            send_progress_update(media_type, task_id, progress_base,
-                              f"Processing your {media_type}...")
-# ----------------------------------------------------------------           
+            # making monotonic progress
+            start=15
+            end=75
+            progress = start + int((i + 1) / num_batches * (end - start))
+
+            # showing multiple msgs
+            send_progress_update(media_type, task_id, progress, f"Processing your {media_type} frames")
+        # ----------------------------------------------------------------           
 
         # Extract the current batch of images
         batch = input_images[i * batch_size : (i + 1) * batch_size]
         # Detect faces in the current batch
         boxes, probs = mtcnn.detect(batch)  # Perform detection on the current batch
 
-# ----------------------------------------------------------------  
-    if task_id:
-        send_progress_update(media_type, task_id, progress_base + 10, "Detecting faces...")
- # ----------------------------------------------------------------  
 
         #print(probs, type(probs))
         try:
@@ -1200,12 +1160,6 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
         batch_faces = mtcnn.extract(batch, boxes, None)  # Extract faces from the detected boxes
         # print(batch_faces)
 
-# ----------------------------------------------------------------  
-    if task_id:
-        media_type = "video" if is_video else "image"
-        send_progress_update(media_type, task_id, progress_base + 20, "Extracting faces...")
-# ----------------------------------------------------------------  
-
         for idx, face in enumerate(batch_faces):
             if face is not None:
                 valid_faces.append(face)
@@ -1220,24 +1174,23 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
             # print(next(model_face.parameters()).device)
             # print(batch_faces.device)
 
-# ----------------------------------------------------------------
+            # ---------------------For progressbar---------------------------
             if task_id:
-                media_type = "video" if is_video else "image"
-                send_progress_update(media_type, task_id, progress_base + 30, "Preprocessing faces...")
-# ----------------------------------------------------------------
+                send_progress_update(media_type, task_id, progress, "Preparing faces for model...")
+            # ---------------------------------------------------------------
 
             # Perform batch prediction
             with torch.no_grad():
                 outputs = torch.sigmoid(model_face(batch_faces))  # Predict for all faces in batch
+
+                # ---------------------For progressbar---------------------------
+                if task_id:
+                    send_progress_update(media_type, task_id, progress, "Running model...")
+                # ---------------------------------------------------------------
+
                 real_predictions = 1 - outputs.squeeze(1).cpu().numpy()  # Real confidence
                 fake_predictions = outputs.squeeze(1).cpu().numpy()  # Fake confidence
                 print(torch.is_grad_enabled())
-
-# ----------------------------------------------------------------
-            if task_id:
-                media_type = "video" if is_video else "image"
-                send_progress_update(media_type, task_id, progress_base + 40, "Predicting...")
-# ----------------------------------------------------------------
 
             # Process each face in the batch
             for j, face in enumerate(batch_faces):
@@ -1290,21 +1243,19 @@ def predict_image_video(input_images: list, mtcnn, model_face, batch_size=100, g
     except:
         pass
 
-# ---------------------For progressbar---------------------------
-    # if task_id:
-    #     send_progress_update('video', task_id, 100, "Video analysis complete")
+    # ---------------------For progressbar---------------------------
     if task_id:
         media_type = "video" if is_video else "image"
-        completion_progress = 80 if is_video else 90  # Images complete faster
-        send_progress_update(media_type, task_id, completion_progress, 
+        send_progress_update(media_type, task_id, 78, 
                            f"{media_type.capitalize()} analysis complete")
-# ----------------------------------------------------------------
+    # ----------------------------------------------------------------
 
 
     return batch_boxes, confidences_list, visualizations_list
 
 # --------------------------- saving only fake Grad-CAM frames ---------------------------
 # Store real and fake frames (Not storing every frames- storing every 3rd frame in a sequence of consecutive frames)
+
 
 def process_and_save_frames(frames, confidences, batch_boxes):
     # Initialize counters and font
@@ -1451,10 +1402,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
     # if input_path.lower().endswith((".mp4", ".mkv","hevc")):
     if input_path.lower().endswith((".mp4")):
         print("Processing video...")
-# ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         if task_id:
             send_progress_update('video', task_id, 5, "Loading video file...")
-# ----------------------------------------------------------------
+        # ----------------------------------------------------------------
         
         frames, total_frames, fps = video_to_frames(input_path, duration)
         print("Video Processed")
@@ -1469,10 +1420,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             print(f"No audio found in the video: {e}")
             audio_path = None
 
-# ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         if task_id:
-            send_progress_update('video', task_id, 20, "Audio extracted")
-# ----------------------------------------------------------------
+            send_progress_update('video', task_id, 10, "Audio extracted")
+        # ----------------------------------------------------------------
 
         # Video predictions
         print("Predicting for video...")
@@ -1481,14 +1432,13 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         )
         print("Video Prediction Completed")
 
-# ------------------------------ Uncomment to save frames ------------------------------------------
+        # ------------------------------ Uncomment to save frames ------------------------------------------
         # Save frames with predictions
         process_and_save_frames(frames, confidences, batch_boxes)
 
         # # # saving Grad-CAM frames
         process_and_save_gradcam_full_frames(frames, confidences,batch_boxes, face_with_mask)
-
-# ------------------------------------------------------------------------------------------------------
+        # ------------------------------------------------------------------------------------------------------
 
         # # Calculate average confidence for video
         confd = [conf for confs in confidences for conf in confs]
@@ -1499,7 +1449,7 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         # Audio predictions
         if audio_path and predict_audio_flag:
             if task_id:
-                send_progress_update('video', task_id, 85, "Predicting audio...")
+                send_progress_update('video', task_id, 80, "Predicting audio...")
 
             print("Predicting for Audio...")
             audio_predictions, predictions, graph_generated = predict_audio(audio_path, model_audio, graph_path, audio_batch_size, duration=duration, task_id=task_id )
@@ -1537,10 +1487,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
                 )
                 audio_interpolated = list(zip(real_interpolated, fake_interpolated))  # [(real1, fake1), ...]
         
-# ---------------------For progressbar---------------------------
+                # ---------------------For progressbar---------------------------
                 if task_id:
                     send_progress_update('video', task_id, 90, "Audio prediction complete")
-# ----------------------------------------------------------------       
+                # ----------------------------------------------------------------       
         else:
             # No audio predictions
             real_audio_confidence = 0.0
@@ -1548,10 +1498,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             audio_interpolated = []
             graph_generated = False  # 👈 Add this fallback
 
-# ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         if task_id:
-            send_progress_update('video', task_id, 95, "Compiling final output...")
-# ----------------------------------------------------------------
+            send_progress_update('video', task_id, 94, "Compiling final output...")
+        # ----------------------------------------------------------------
 
         # Compile output video with predictions
         compiling_output_video(frames, batch_boxes, confidences, fps, total_frames, audio_interpolated)
@@ -1564,10 +1514,16 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             combine_video_audio(input_path)
             combine_video_audio(input_path, output_grad_location, fake_frames_write_location)
 
-# ---------------------For progressbar---------------------------
-        if task_id:
-            send_progress_update('video', task_id, 100, "Processing complete for video")  # FINAL'
-# ----------------------------------------------------------------
+        # ---------------------For progressbar---------------------------
+        # wait for main output video
+        main_ready = wait_for_file(output_audio_video_location)
+        grad_ready = True
+        if fake_frames:
+             grad_ready = wait_for_file(output_grad_location)
+            
+        if task_id and main_ready and grad_ready:
+            send_progress_update('video', task_id, 100, "Processing complete for video")
+        # ----------------------------------------------------------------
 
         # Return results
         if audio_path and predict_audio_flag:
@@ -1582,22 +1538,26 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
         # ---------------------For progressbar---------------------------
         if task_id:
             send_progress_update('audio', task_id, 5, "Loading audio file...")
-            # ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         audio_predictions, predictions, graph_generated = predict_audio(input_path, model_audio, graph_path, audio_batch_size, duration=duration, task_id=task_id )
         print("Audio Prediction Completed")
         real_confidence = audio_predictions[0] * 100  # Average confidence for "real"
         fake_confidence = audio_predictions[1] * 100  # Average confidence for "fake"
         print(f"Final Audio Confidence: Real: {real_confidence:.2f}% Fake: {fake_confidence:.2f}%")
         print("Successful!")
+        # ---------------------For progressbar---------------------------
+        if task_id:
+            send_progress_update('audio', task_id, 100, "Audio analyzed Successfully")
+        # ---------------------For progressbar---------------------------
         return real_confidence, fake_confidence, graph_generated
 
 
     elif input_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
         print("Predicting on image...")
-# ---------------------For progressbar---------------------------
+        # ---------------------For progressbar---------------------------
         if task_id:
-            send_progress_update('image', task_id, 5, "Loading image file...")
-# ----------------------------------------------------------------
+            send_progress_update('image', task_id, 10, "Loading image file...")
+        # ----------------------------------------------------------------
         image = process_image(input_path)
         batch_boxes, confidences, face_with_mask = predict_image_video(image, mtcnn, model_face, batch_size=1, grad=fake_frames, task_id=task_id, is_video=False)
         print("Prediction Done")
@@ -1607,10 +1567,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
             print("No faces detected in the image.")
             return
 
-# ------------------------For progressbar-------------------------
+        # ------------------------For progressbar-------------------------
         if task_id:
             send_progress_update('image', task_id, 80, "Compiling results...")
-# ----------------------------------------------------------------
+        # ----------------------------------------------------------------
 
         print("Compiling image...")
         all_confidence = compiling_image(image, batch_boxes, confidences)
@@ -1619,10 +1579,10 @@ def predict(input_path, mtcnn, model_face, model_audio=None, duration=None, audi
           all_confidence = compiling_fake_image(image, face_with_mask, batch_boxes, confidences)
         print("Compilation Done")
 
-# -----------------------For progressbar--------------------------
+        # -----------------------For progressbar--------------------------
         if task_id:
             send_progress_update('image', task_id, 100, "Processing complete for image")
-# ----------------------------------------------------------------
+        # ----------------------------------------------------------------
         return all_confidence
 
 

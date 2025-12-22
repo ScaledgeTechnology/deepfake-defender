@@ -123,11 +123,10 @@ def video_upload(request):
 
 
              # Store the data in session
-            request.session['uploaded_video_file'] = output_video_path
+            request.session['output_audio_video'] = output_video_path
 
             request.session['grad_output_video'] = f"{settings.MEDIA_URL}video_predict/video/grad_video.mp4"
 
-            # request.session['graph_path'] = f"{settings.MEDIA_URL}video_predict/graph/audio_graph.png"
             if graph_generated:
                 request.session['graph_path'] = f"{settings.MEDIA_URL}video_predict/graph/audio_graph.png"
             else:
@@ -153,8 +152,20 @@ def video_upload(request):
 # Video display view
 def video_display(request):
     # Retrieve all required data from the session
-    video_path = request.session.get('uploaded_video_file', None)
+    video_path = request.session.get('output_audio_video', None)
+
+    if video_path:
+        abs_path = os.path.join(settings.MEDIA_ROOT, 'video_predict/video/output_audio_video.mp4')
+        if not os.path.exists(abs_path):
+            video_path = None
+
     grad_video_path = request.session.get('grad_output_video', None)
+
+    if grad_video_path:
+        abs_path2 = os.path.join(settings.MEDIA_ROOT, 'video_predict/video/grad_video.mp4')
+        if not os.path.exists(abs_path2):
+            grad_video_path = None
+
     graph_path = request.session.get('graph_path', None)
     real_avg_video = request.session.get('real_avg_video', None)
     fake_avg_video = request.session.get('fake_avg_video', None)
